@@ -53,22 +53,3 @@ OAI uplink physical layer simulation entry point. Simulates uplink transmission 
 4. CRC check
 
 ---
-
-## Command Line Options
-
-`nr_ulsim` can be launched with various CLI flags to configure the simulation.
-
-| Option | Description |
-|--------|-------------|
-| `-s`   | Random seed |
-| `-n`   | Number of SNR points |
-| `-S`   | SNR start value |
-| `-m`   | Modulation (9 = QPSK) |
-| `-t`   | Number of trials per SNR |
-| `-d`   | Enable debug logs |
-| `-f`   | Enable frequency-domain equalizer |
-
-Example:
-
-```bash
-./nr_ulsim -s 0 -n 10 -S 0 -m 9 -t 100
