@@ -1,4 +1,4 @@
-OAI Project Directory Structure
+# OAI Project Directory Structure
 
 | Directory Path     | Description                                                                                 |
 |--------------------|---------------------------------------------------------------------------------------------|
