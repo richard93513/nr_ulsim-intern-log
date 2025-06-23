@@ -29,17 +29,17 @@
 
 ## 🧪 Simulation Examples
 
-### Example 1: Basic SNR sweep with QPSK
+###  Example 1: Basic SNR Sweep with QPSK
 
 ```bash
 ./nr_ulsim -s 0 -S 10 -n 100 -m 9 -r 25 -u 1 -I 20 -P
 
-### Example 2: Log simulation results to CSV with 16QAM
+###  Example 2: Log to CSV with 16QAM
 
 ```bash
 ./nr_ulsim -s 0 -S 6 -n 200 -m 10 -r 50 -P -X uplink_qam16.csv
 
-###Example 3: Apply realistic channel model and 2 RX antennas
+###  Example 3: Realistic Channel Model
 
 ```bash
 ./nr_ulsim -s 0 -S 8 -n 150 -m 10 -r 51 -u 1 -g B,m,70 -y 1 -z 2 -P
