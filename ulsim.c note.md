@@ -71,3 +71,27 @@ This document describes the overall process and internal modules involved in the
 - Passes data through the simulated channel (AWGN or fading).
   
 ---
+
+### 4. Receiver Processing
+
+- Demodulates the received signal and computes Log-Likelihood Ratios (LLRs).
+- Performs LDPC decoding to retrieve the original data.
+- Verifies the decoded result using CRC.
+- Uses HARQ logic to determine if retransmission is required.
+
+---
+
+### 5. Performance Statistics
+
+- Collects simulation metrics: Block Error Rate (BLER), throughput, delay, etc.
+- Determines if the configured number of trials has been completed.
+- If not, continues the simulation loop.
+
+---
+
+### 6. Finalization
+
+- Prints or saves final results (e.g., to CSV file).
+- Frees all allocated memory and gracefully exits the simulation.
+
+---
