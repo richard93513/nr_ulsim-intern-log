@@ -16,17 +16,21 @@ OAI uplink physical layer simulation entry point. Simulates uplink transmission 
 
 ---
 
-### Initialization Flow
+## OAI Project Directory Structure
 
-- `load_configmodule()`  
-  Load runtime configuration from command-line or config file.
-- `set_default_frame_parms()`  
-  Initialize frame structure (FFT size, subcarrier spacing, slots, etc.).
-- `nr_phy_config_request_sim()`  
-  Apply transport and physical layer simulation parameters.
-- `init_nr_transport()`  
-  Initialize LDPC encoding/decoding, rate matching, modulation, etc.
-
+| Directory Path     | Description                                                                                 |
+|--------------------|---------------------------------------------------------------------------------------------|
+| openair1/          | Implementation of Layer 1 (PHY). Includes LDPC encoder/decoder source files such as nrLDPC_encoder.c and ldpc_decoder.c. |
+| radio/             | Implementation of simulated RF channel for radio front-end. Handles transmission simulation between gNB and UE. Key file: simulator.c. |
+| cmake_targets/     | Build scripts and configuration for compiling and launching softmodem. Main execution happens from this directory. |
+| executables/       | Contains main entry points for gNB, UE, and other top-level executables.                     |
+| openair2/          | Implementation of Layer 2 modules (MAC / RLC / PDCP / RRC). Can be skipped for LDPC-focused study. |
+| openair3/          | Layer 3 modules (e.g., NGAP, GTP for core network). Not directly related to LDPC.           |
+| CMakeLists.txt     | Top-level CMake configuration file for building the entire project.                         |
+| doc/               | Documentation and architecture descriptions (e.g., system diagrams, flow explanations).     |
+| tools/             | Developer tools for code formatting, analysis, and maintenance.                             |
+| docker/            | Docker build files and environment setup for container-based deployment.                     |
+| ci-scripts/        | CI/CD scripts and configurations for automated testing and integration.                     |
 ---
 
 ### Transmission Chain (TX)
