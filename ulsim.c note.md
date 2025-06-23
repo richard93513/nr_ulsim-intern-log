@@ -42,23 +42,32 @@ This document describes the overall process and internal modules involved in the
 
 ## Flowchart
 
-### Transmission Chain (TX)
+## 🔍 Module Descriptions
 
-1. Generate transport block (TB)
-2. Apply CRC
-3. Perform LDPC encoding
-4. Rate matching and interleaving
-5. Modulation (QPSK/16QAM/64QAM)
-6. Add DMRS (if applicable)
-7. Add AWGN or fading channel (simulated)
+### 1. Program Startup and Parameter Parsing
+
+- Execution starts from `main()`.
+- Parses CLI options using `getopt` (e.g., SNR range, MCS, number of trials).
+- Loads and sets global parameters for simulation.
 
 ---
 
-### Reception Chain (RX)
+### 2. Simulation Environment Initialization
 
-1. Demodulation
-2. LLR calculation
-3. LDPC decoding
-4. CRC check
+- Initializes random seeds and sin-cos LUTs.
+- Configures the channel model (AWGN, TDL-A/B/C).
+- Sets up modulation, resource block settings, HARQ parameters.
 
+---
+
+### 3. Simulation Loop (`n_trials`)
+
+- Generates a new Transport Block (TB).
+- Appends CRC for error detection.
+- Performs LDPC encoding to produce the codeword.
+- Applies rate matching and interleaving.
+- Modulates symbols (QPSK/16QAM/64QAM).
+- Adds DMRS (reference signals for channel estimation).
+- Passes data through the simulated channel (AWGN or fading).
+  
 ---
