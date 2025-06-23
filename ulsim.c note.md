@@ -41,6 +41,8 @@ This document describes the overall process and internal modules involved in the
 ---
 
 ## Flowchart
+![Editor _ Mermaid Chart-2025-06-23-132355](https://github.com/user-attachments/assets/d9d2f8dc-40c0-4cb4-9500-28662782fd69)
+
 
 ## 🔍 Module Descriptions
 
