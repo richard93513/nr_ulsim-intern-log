@@ -34,7 +34,7 @@
 ```bash
 ./nr_ulsim -s 0 -S 10 -n 100 -m 9 -r 25 -u 1 -I 20 -P
 ```
-# Simulation Result 
+Simulation Result 
 
 ```bash
 *****************************************
