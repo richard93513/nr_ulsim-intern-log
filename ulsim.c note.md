@@ -32,7 +32,15 @@ OAI uplink physical layer simulation entry point. Simulates uplink transmission 
 
 ---
 
+# nr_ulsim Simulation Flow (OpenAirInterface)
 
+## Overview
+
+This document describes the overall process and internal modules involved in the `nr_ulsim` uplink physical layer simulator of the OAI project.
+
+---
+
+## Flowchart
 
 ### Transmission Chain (TX)
 
