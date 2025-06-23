@@ -20,7 +20,7 @@
 ---
 
 ## File Path
-**openair1/TEST/ULSIM/nr_ulsim.c**  
+**openair1/SIMULATION/NR_PHY/ulsim.c**  
 OAI uplink physical layer simulation entry point. Simulates uplink transmission and decoding without over-the-air RF hardware.
 
 ---
