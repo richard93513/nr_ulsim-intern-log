@@ -1,6 +1,6 @@
 # NR ULSIM Intern Log
 
-This repository contains documentation and simulation logs related to the `nr_ulsim` component of OpenAirInterface (OAI). The goal is to document the structure, functionality, and testing of the NR uplink simulator.
+This repository contains documentation and simulation logs related to the `nr_ulsim` component of openairinterface5g . The goal is to document the structure, functionality, and testing of the NR uplink simulator.
 
 ## Structure
 
