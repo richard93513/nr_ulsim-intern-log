@@ -343,3 +343,67 @@ if (UE2gNB) {
 }
 ```
 - Randomizes the multipath channel characteristics for each simulation trial.
+
+## 🔧 2.3 Modulation and Resource Block Setup
+- Sets modulation scheme according to MCS (QPSK, 16QAM, 64QAM, etc.).
+
+- Determines number of resource blocks (RBs) and symbols per slot.
+
+- Sets OFDM symbol size and cyclic prefix length (normal or extended).
+
+```c
+set_scs_parameters(pusch_pdu->subcarrier_spacing, &gNB->frame_parms);
+```
+- Sets subcarrier spacing and corresponding symbol timing for uplink frame.
+
+```c
+get_bandwidth_index(pusch_pdu->subcarrier_spacing, bandwidth);
+```
+- Chooses bandwidth index to determine the number of PRBs and grid size.
+```c
+init_nr_frame_parms(&gNB->frame_parms);
+```
+- Initializes the NR frame structure, including FFT size, CP length, symbol count.
+
+## 🔧 2.4 HARQ and Link Adaptation Parameters
+- Initializes HARQ parameters such as max LDPC decoding iterations.
+
+- Configures number of HARQ rounds and related counters.
+  
+- Prepares data structures for retransmissions and error tracking.
+
+```c
+gNB->ulsch[UE_id] = new_gNB_ulsch(max_ldpc_iterations, N_RB_UL, 0);
+```
+- Allocates uplink HARQ structure and sets the max number of decoding attempts.
+
+```c
+UE->ul_harq_processes[harq_pid].round = 0;
+```
+- Initializes HARQ round tracking for retransmission simulation.
+
+## 🔧 2.5 Other Simulation Settings
+- Sets SNR range and increments for simulation loop.
+
+- Configures logging verbosity and output files.
+
+- Initializes performance counters and statistics storage.
+
+```c
+for (SNR = snr0; SNR <= snr1; SNR += snr_step) {
+  ...
+}
+```
+- Main loop of the simulation based on SNR sweep configuration.
+
+```c
+init_stats(&gNB->phy_proc_rx);
+init_stats(&gNB->ulsch_decoding_stats);
+```
+- Prepares performance statistics tracking modules for RX and decoding.
+
+```c
+if (print_perf == 1)
+  printDistribution(&gNB->phy_proc_rx, table_rx, "Total PHY proc rx");
+```
+- Optionally prints performance timing breakdown after simulation.
