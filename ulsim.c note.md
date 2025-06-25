@@ -122,6 +122,35 @@ The program is divided into the following three main parts:
    - Runs the full uplink PHY transmission and reception chain.
    - Includes transport block generation, encoding, modulation, channel transmission, decoding, and error checking.
 
+## 1. Program Startup & CLI Parsing
+
+This section handles program startup and command-line interface (CLI) option parsing. It sets up initial simulation parameters and prepares the program to run the uplink simulation.
+
+### 1.1 Command-Line Argument Parsing
+
+- Uses `getopt` to parse CLI options like SNR range, number of trials, MCS, etc.
+- Validates input parameters and stores them in global or local variables.
+
+### 1.2 Global Parameter Setup
+
+- Loads or initializes global parameters related to the NR frame structure.
+- Sets values for bandwidth, subcarrier spacing, number of resource blocks, etc.
+
+### 1.3 Logging and Output Setup
+
+- Configures logging levels and output file handles.
+- Prepares CSV files or other output formats if requested.
+
+### 1.4 Memory Allocation
+
+- Allocates buffers for transmitted and received data.
+- Prepares data structures needed throughout the simulation.
+
+### 1.5 Initial Checks and Messages
+
+- Prints summary of simulation configuration.
+- Verifies correctness of parameters before entering main loop.
+
 ## 🔧 1. Program Startup & CLI Parsing (Part 1)
 
 ```c
