@@ -267,3 +267,36 @@ init_simulation_globals(&sim_params);
 ```
 - Initialize global simulation parameters like frame parameters, modulation schemes, HARQ config
 
+## 2. Simulation Environment Initialization
+
+This section sets up the simulation environment after parsing the CLI parameters. It initializes the random number generator, configures the channel model, modulation scheme, resource blocks, and HARQ parameters.
+
+### 2.1 Random Number Generator and LUT Initialization
+
+- Seeds the random number generator using a high-resolution timer or fixed seed.
+- Initializes sine-cosine lookup tables for OFDM modulation and demodulation.
+- Ensures repeatability of simulations with controlled seeds.
+
+### 2.2 Channel Model Configuration
+
+- Selects channel model type based on user input (e.g., AWGN, TDL-A, TDL-B, TDL-C).
+- Sets fading parameters such as delay profiles, Doppler spread.
+- Configures multipath channel simulation buffers.
+
+### 2.3 Modulation and Resource Block Setup
+
+- Sets modulation scheme according to MCS (QPSK, 16QAM, 64QAM, etc.).
+- Determines number of resource blocks (RBs) and symbols per slot.
+- Sets OFDM symbol size and cyclic prefix length (normal or extended).
+
+### 2.4 HARQ and Link Adaptation Parameters
+
+- Initializes HARQ parameters such as max LDPC decoding iterations.
+- Configures number of HARQ rounds and related counters.
+- Prepares data structures for retransmissions and error tracking.
+
+### 2.5 Other Simulation Settings
+
+- Sets SNR range and increments for simulation loop.
+- Configures logging verbosity and output files.
+- Initializes performance counters and statistics storage.
