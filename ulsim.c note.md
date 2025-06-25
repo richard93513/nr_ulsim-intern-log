@@ -104,3 +104,5 @@ It divides the program into **three major sections** and provides a detailed bre
 of the **Startup & Initialization** phase.  
 
 This corresponds to the physical layer (PHY) simulation logic in **OpenAirInterface (OAI)**.
+
+![Editor _ Mermaid Chart-2025-06-25-163830](https://github.com/user-attachments/assets/ebd60712-c057-498c-a0e1-4d59de972d83)
