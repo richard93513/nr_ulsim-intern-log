@@ -106,3 +106,39 @@ of the **Startup & Initialization** phase.
 This corresponds to the physical layer (PHY) simulation logic in **OpenAirInterface (OAI)**.
 
 ![Editor _ Mermaid Chart-2025-06-25-163830](https://github.com/user-attachments/assets/ebd60712-c057-498c-a0e1-4d59de972d83)
+
+The program is divided into the following three main parts:
+
+1. **Program Startup & CLI Parsing**
+   - Entry point: `main()`
+   - Parses command-line arguments (e.g., SNR, MCS, number of trials).
+   - Sets global simulation parameters.
+
+2. **Simulation Initialization**
+   - Initializes system configuration, memory buffers, and channel models.
+   - Sets up modulation, frame structure, and UE/gNB parameters.
+
+3. **Main Simulation Loop (`n_trials`)**
+   - Runs the full uplink PHY transmission and reception chain.
+   - Includes transport block generation, encoding, modulation, channel transmission, decoding, and error checking.
+
+## 🔧 1. Program Startup & CLI Parsing (Part 1)
+
+```c
+int main(int argc, char **argv)
+```
+
+Entry point of the simulation.
+Receives command-line arguments for configuration.
+```c
+init_openair0();
+```
+
+Initializes the RF frontend abstraction (though unused in pure simulation).
+
+```c
+randominit(0);
+set_taus_seed(0);
+```
+
+Seeds random number generators for reproducibility.
