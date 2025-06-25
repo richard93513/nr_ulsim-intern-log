@@ -140,3 +140,30 @@ randominit(0);
 set_taus_seed(0);
 ```
 - Seeds random number generators for reproducibility.
+
+## 🔧 1. Program Startup & CLI Parsing (Part 2)
+
+```c
+load_configmodule(argc, argv);
+```
+- Loads and parses configuration modules (usually for global OAI params).
+
+```c
+logInit();
+```
+- Initializes the logging system.
+
+```c
+set_glog(LOG_DEBUG, LOG_HIGH, 1);
+```
+- Sets global log verbosity level.
+
+```c
+int ret = 1;
+```
+- Default return value, will be set to 0 if simulation completes successfully.
+
+```c
+cpu_set_t cpuset;
+```
+- Declares CPU affinity set for potential multi-core execution binding.
