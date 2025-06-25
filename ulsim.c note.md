@@ -97,3 +97,10 @@ This document describes the overall process and internal modules involved in the
 - Frees all allocated memory and gracefully exits the simulation.
 
 ---
+# 🧠 NR Uplink Simulator: Main Flow Structure Notes
+
+This document serves as a structural note for the `nr_ulsim.c` simulation main program.  
+It divides the program into **three major sections** and provides a detailed breakdown  
+of the **Startup & Initialization** phase.  
+
+This corresponds to the physical layer (PHY) simulation logic in **OpenAirInterface (OAI)**.
