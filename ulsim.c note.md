@@ -301,19 +301,45 @@ This section sets up the simulation environment after parsing the CLI parameters
 - Configures logging verbosity and output files.
 - Initializes performance counters and statistics storage.
 
-## 🔧 2. Simulation Environment Initialization (Part 1)
+## 🔧 2.1 Random Number Generator and LUT Initialization
+- Seeds the random number generator using a high-resolution timer or fixed seed.
 
-- Sets up the channel type (e.g., AWGN, TDL-A/B/C) based on user input or defaults.
-- Configures parameters like delay spread, Doppler frequency, and fading characteristics.
-- Initializes channel model structures for simulating multipath effects.
-- Applies any power delay profile (PDP) settings required for the simulation.
+- Initializes sine-cosine lookup tables for OFDM modulation and demodulation.
+
+- Ensures repeatability of simulations with controlled seeds.
 
 ```c
-if (channel_model_type == AWGN) {
-    // Initialize AWGN noise parameters
-} else if (channel_model_type == TDL_A) {
-    // Set up TDL-A channel delay profile and fading parameters
-}
-// Additional channel models handled similarly
+randominit(0);
+set_taus_seed(0);
 ```
-- Ensures channel is ready before transmitting signals through it.
+- Seeds the random number generator with a fixed seed (0) for reproducibility across runs.
+```c
+init_sin_cos_LUT();
+```
+- Initializes sine and cosine lookup tables used during OFDM modulation and demodulation.
+
+## 🔧 2.2 Channel Model Configuration
+- Selects channel model type based on user input (e.g., AWGN, TDL-A, TDL-B, TDL-C).
+
+- Sets fading parameters such as delay profiles, Doppler spread.
+
+- Configures multipath channel simulation buffers.
+
+```c
+if (channel_model == AWGN) {
+  UE2gNB = new_channel_desc_scm(UE->frame_parms.nb_antennas_tx,
+                                gNB->frame_parms.nb_antennas_rx,
+                                channel_model,
+                                0,
+                                0,
+                                0);
+}
+```
+- Initializes an AWGN channel description with no fading or Doppler.
+
+```c
+if (UE2gNB) {
+  random_channel(UE2gNB, 0);
+}
+```
+- Randomizes the multipath channel characteristics for each simulation trial.
