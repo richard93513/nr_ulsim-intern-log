@@ -167,3 +167,54 @@ int ret = 1;
 cpu_set_t cpuset;
 ```
 - Declares CPU affinity set for potential multi-core execution binding.
+
+## 🔧 1. Program Startup & CLI Parsing (Part 3)
+
+```c
+init_openair0();
+```
+- Initializes RF hardware interface abstraction (even if unused in simulation mode).
+
+```c
+randominit(0);
+```
+- Initializes the random number generator with seed 0.
+
+```c
+crcTableInit();
+```
+- Initializes the CRC table used in encoding/decoding.
+
+```c
+generate_ul_reference_signal_sequences();
+```
+- Generates reference signal sequences (e.g., DMRS) for uplink.
+
+```c
+init_context(gNB, UE, &gNB_config, &UE_config);
+```
+- Sets up the gNB and UE context structures with simulation parameters.
+
+## 🔧 1. Program Startup & CLI Parsing (Part 4)
+
+```c
+if (input_fd) {
+  // When input file is provided, read simulation parameters and data from file.
+  // Useful for replay or predefined scenarios.
+  read_input_file(input_fd, &sim_params);
+}```
+- Handles optional input from a file to override or provide simulation parameters.
+
+```c
+if (output_fd) {
+  // Opens file for writing simulation output results.
+  open_output_file(output_fd);
+}```
+- Prepares output destination for simulation logs or data.
+
+```c
+if (scg_fd) {
+  // Reads secondary cell group configuration if provided.
+  read_scg_config(scg_fd);
+}```
+- Loads additional configuration for simulation (optional).
