@@ -224,11 +224,17 @@ if (scg_fd) {
 ## 🔧 1. Program Startup & CLI Parsing (Part 5)
 
 ```c
-// Initialize random seed for reproducibility
 srand(time(NULL));
+```
+- Initialize random seed for reproducibility
 
-// Initialize sine and cosine look-up tables used for OFDM modulation/demodulation
+```c
 init_sin_cos_LUT();
+```
+- Initialize sine and cosine look-up tables used for OFDM modulation/demodulation
 
-// Initialize global simulation parameters like frame parameters, modulation schemes, HARQ config
+```c
 init_simulation_globals(&sim_params);
+```
+- Initialize global simulation parameters like frame parameters, modulation schemes, HARQ config
+
