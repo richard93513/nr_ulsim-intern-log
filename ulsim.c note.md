@@ -202,19 +202,33 @@ if (input_fd) {
   // When input file is provided, read simulation parameters and data from file.
   // Useful for replay or predefined scenarios.
   read_input_file(input_fd, &sim_params);
-}```
+}
+```
 - Handles optional input from a file to override or provide simulation parameters.
 
 ```c
 if (output_fd) {
   // Opens file for writing simulation output results.
   open_output_file(output_fd);
-}```
+}
+```
 - Prepares output destination for simulation logs or data.
 
 ```c
 if (scg_fd) {
   // Reads secondary cell group configuration if provided.
   read_scg_config(scg_fd);
-}```
+}
+```
 - Loads additional configuration for simulation (optional).
+## 🔧 1. Program Startup & CLI Parsing (Part 5)
+
+```c
+// Initialize random seed for reproducibility
+srand(time(NULL));
+
+// Initialize sine and cosine look-up tables used for OFDM modulation/demodulation
+init_sin_cos_LUT();
+
+// Initialize global simulation parameters like frame parameters, modulation schemes, HARQ config
+init_simulation_globals(&sim_params);
