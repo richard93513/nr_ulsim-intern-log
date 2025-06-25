@@ -127,18 +127,16 @@ The program is divided into the following three main parts:
 ```c
 int main(int argc, char **argv)
 ```
+-Entry point of the simulation.
+-Receives command-line arguments for configuration.
 
-Entry point of the simulation.
-Receives command-line arguments for configuration.
 ```c
 init_openair0();
 ```
-
-Initializes the RF frontend abstraction (though unused in pure simulation).
+-Initializes the RF frontend abstraction (though unused in pure simulation).
 
 ```c
 randominit(0);
 set_taus_seed(0);
 ```
-
-Seeds random number generators for reproducibility.
+-Seeds random number generators for reproducibility.
