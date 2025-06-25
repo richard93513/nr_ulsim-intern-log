@@ -151,7 +151,7 @@ This section handles program startup and command-line interface (CLI) option par
 - Prints summary of simulation configuration.
 - Verifies correctness of parameters before entering main loop.
 
-## 🔧 1. Program Startup & CLI Parsing (Part 1)
+## 🔧 1.1 Command-Line Argument Parsing
 
 ```c
 int main(int argc, char **argv)
@@ -170,7 +170,7 @@ set_taus_seed(0);
 ```
 - Seeds random number generators for reproducibility.
 
-## 🔧 1. Program Startup & CLI Parsing (Part 2)
+## 🔧 1.2 Global Parameter Setup
 
 ```c
 load_configmodule(argc, argv);
@@ -197,7 +197,7 @@ cpu_set_t cpuset;
 ```
 - Declares CPU affinity set for potential multi-core execution binding.
 
-## 🔧 1. Program Startup & CLI Parsing (Part 3)
+## 🔧 1.3 Logging and Output Setup
 
 ```c
 init_openair0();
@@ -224,7 +224,7 @@ init_context(gNB, UE, &gNB_config, &UE_config);
 ```
 - Sets up the gNB and UE context structures with simulation parameters.
 
-## 🔧 1. Program Startup & CLI Parsing (Part 4)
+## 🔧 1.4 Memory Allocation
 
 ```c
 if (input_fd) {
@@ -250,7 +250,7 @@ if (scg_fd) {
 }
 ```
 - Loads additional configuration for simulation (optional).
-## 🔧 1. Program Startup & CLI Parsing (Part 5)
+## 🔧 1.5 Initial Checks and Messages
 
 ```c
 srand(time(NULL));
