@@ -300,3 +300,40 @@ This section sets up the simulation environment after parsing the CLI parameters
 - Sets SNR range and increments for simulation loop.
 - Configures logging verbosity and output files.
 - Initializes performance counters and statistics storage.
+
+## 🔧 2. Simulation Environment Initialization (Part 1)
+
+```c
+srand(time(NULL));
+Initializes the random seed based on the current system time.
+
+Ensures stochastic processes (e.g., noise generation, fading) are randomized.
+
+Supports reproducibility if a fixed seed is later used.
+
+🔧 2. Simulation Environment Initialization (Part 2)
+c
+複製程式碼
+init_sin_cos_lut();
+Precomputes sine and cosine values for OFDM symbol modulation and demodulation.
+
+Improves computational efficiency during FFT/IFFT operations.
+
+Essential for waveform generation and channel simulation.
+
+🔧 2. Simulation Environment Initialization (Part 3)
+c
+複製程式碼
+if (channel_model == AWGN) {
+  init_awgn_channel();
+} else if (channel_model == TDL_A) {
+  init_tdl_channel(TDL_A);
+} else if (channel_model == TDL_B) {
+  init_tdl_channel(TDL_B);
+}
+// Additional models possible
+Determines which channel model is selected: AWGN, TDL-A, TDL-B, etc.
+
+Initializes channel parameters accordingly (e.g., delay spread, Doppler).
+
+Prepares channel state for subsequent signal propagation simulation.
