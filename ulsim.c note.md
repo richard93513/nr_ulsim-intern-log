@@ -601,3 +601,26 @@ if (UE2gNB != NULL) {
 - Applies fading and multipath channel effects using pre-defined models.
 
 - This stage simulates real-world transmission impairments, preparing the signal for receiver processing.
+
+## 🔧 3.6 Receiver Processing and LLR Computation
+
+- The received signal undergoes demodulation and channel estimation.
+- Computes Log-Likelihood Ratios (LLRs) for each received bit.
+- These LLRs are used in the LDPC decoder.
+
+```c
+nr_ulsch_channel_estimation(rxdata, ...);
+```
+- Estimates the channel from DMRS symbols, needed to equalize received data.
+
+```c
+nr_ulsch_extract_rbs(rxdataF, &ulsch_llr, ...);
+```
+- Extracts resource blocks from the received data for decoding.
+
+```c
+nr_ulsch_llr_computation(rxdataF, ulsch_llr, ...);
+```
+- Performs LLR computation based on modulation type and channel estimate.
+
+- This step is critical for decoding accuracy and ultimately affects BLER performance.
