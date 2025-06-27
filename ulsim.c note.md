@@ -450,3 +450,49 @@ This section iteratively simulates the full uplink PHY transmission and receptio
 - Triggers HARQ rounds or retransmissions as needed.
 
 - Collects BLER, throughput, and decoding performance metrics.
+
+🔧 3.1 Transport Block Generation
+- Calculates the appropriate TB size based on MCS, bandwidth, and other configuration.
+
+- Generates a pseudo-random bit sequence to simulate real uplink data.
+
+- Appends CRC for error detection before encoding.
+
+```c
+ulsch->harq_processes[harq_pid]->TBS = nr_compute_tbs(
+  pusch_pdu->mcs,
+  pusch_pdu->mcs_table,
+  pusch_pdu->nb_layers,
+  pusch_pdu->rb_size,
+  pusch_pdu->nr_of_symbols,
+  pusch_pdu->dmrs_symbol_map,
+  pusch_pdu->nr_of_dmrs_symbols,
+  0,  // tb_scaling
+  pusch_pdu->transform_precoding
+);
+```
+- Computes the Transport Block Size (TBS) using 3GPP-defined tables based on modulation scheme, number of layers, and resource allocation.
+
+```c
+for (int i = 0; i < TBS_bytes; i++)
+  ulsch_input_buffer[i] = (unsigned char)(taus() & 0xff);
+```
+- Fills the input buffer with random bits using a seeded Tausworthe generator to ensure reproducibility.
+
+```c
+ulsch_input_buffer[TBS_bytes] = 0;
+ulsch_input_buffer[TBS_bytes+1] = 0;
+ulsch_input_buffer[TBS_bytes+2] = 0;
+ulsch_input_buffer[TBS_bytes+3] = 0;
+```
+- Reserves space for the 24-bit CRC at the end of the transport block.
+
+```c
+crc = crc24a(ulsch_input_buffer, TBS_bytes);
+ulsch_input_buffer[TBS_bytes]     = (uint8_t)((crc>>24)&0xff);
+ulsch_input_buffer[TBS_bytes + 1] = (uint8_t)((crc>>16)&0xff);
+ulsch_input_buffer[TBS_bytes + 2] = (uint8_t)((crc>>8 )&0xff);
+ulsch_input_buffer[TBS_bytes + 3] = (uint8_t)((crc    )&0xff);
+```
+- Computes and appends the CRC to the transport block to enable error checking at the receiver.
+
