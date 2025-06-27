@@ -496,3 +496,39 @@ ulsch_input_buffer[TBS_bytes + 3] = (uint8_t)((crc    )&0xff);
 ```
 - Computes and appends the CRC to the transport block to enable error checking at the receiver.
 
+## 🔧 3.2 LDPC Encoding & Rate Matching
+- Encodes the Transport Block using LDPC (Low-Density Parity-Check) coding.
+
+- Applies segmentation and filler bit insertion if the TB is too large.
+
+- Performs rate matching to match codeword length with the physical layer budget.
+
+```c
+nr_ulsch_encoding(gNB->ulsch[UE_id],
+                  &gNB->frame_parms,
+                  NULL,
+                  &gNB->UL_req,
+                  pusch_pdu,
+                  ulsch_input_buffer,
+                  0, // no SRS
+                  0);
+```
+- Entry point for LDPC encoding process. Takes the prepared TB and frame parameters, and returns a fully encoded and rate-matched codeword.
+
+- The internal flow of nr_ulsch_encoding() includes:
+
+-- CRC segmentation if TB > 8424 bits.
+
+-- LDPC base graph selection based on TB size and code rate.
+
+-- LDPC encoding using parity-check matrices.
+
+-- Filler bit insertion if necessary.
+
+-- Rate matching (puncturing or repetition) to adjust output length.
+
+```c
+ulsch->harq_processes[harq_pid]->F = number_of_filler_bits;
+```
+- Filler bits (F) are set when TBS is not a multiple of the LDPC lifting size. These bits are ignored during decoding.
+
