@@ -624,3 +624,47 @@ nr_ulsch_llr_computation(rxdataF, ulsch_llr, ...);
 - Performs LLR computation based on modulation type and channel estimate.
 
 - This step is critical for decoding accuracy and ultimately affects BLER performance.
+
+## 🔧 3.7 Decoding & Error Checking
+
+- Applies LDPC decoding to the received LLRs using the base graph and decoding algorithm.
+- Checks the integrity of the decoded transport block via CRC verification.
+- Determines whether the decoding was successful or needs retransmission.
+
+```c
+ret = nr_ulsch_decoding(
+  UE,
+  SNR,
+  gNB_id,
+  UE_id,
+  harq_pid,
+  llr,
+  &TBS,
+  frame,
+  nr_tti_rx,
+  0,
+  get_Qm_ul(pusch_pdu->mcs),
+  N_RB_UL,
+  NULL
+);
+```
+- Calls the uplink shared channel (ULSCH) decoding function, which includes:
+
+- LDPC decoder
+
+- CRC checker
+
+- HARQ status update
+
+```c
+if (ret < 0) {
+  errors++;
+}
+```
+- Increments error count if decoding failed (e.g., CRC not passed).
+
+```c
+ul_errors++;
+ul_total++;
+```
+- Updates total error statistics and frame count.
