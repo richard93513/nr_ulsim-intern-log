@@ -741,3 +741,36 @@ if (csv_fd) {
 ```
 - Writes the final results to a CSV file if enabled, including:
   - ```cSNR, BLER, BER, Effective Throughput```
+
+🔧 4. Finalization
+- Cleans up dynamically allocated memory and data structures.
+
+- Closes all open file descriptors (e.g., CSV, input/output config).
+
+- Prints final messages and exits the program gracefully.
+
+```c
+if (csv_fd)
+  fclose(csv_fd);
+```
+- Closes the CSV output file if one was used.
+
+```c
+if (input_fd)
+  fclose(input_fd);
+if (output_fd)
+  fclose(output_fd);
+```
+- Closes input and output config files if opened.
+
+```c
+free_channel_desc(UE2gNB);
+free_gNB_ulsch(gNB->ulsch[UE_id]);
+free_UE_ulsch(UE->ulsch[0]);
+```
+- Frees memory used for the channel, uplink HARQ buffers, and LDPC structures.
+
+```c
+return ret;
+```
+- Returns the exit code (0 = success, 1 = failure) and ends the simulation.
