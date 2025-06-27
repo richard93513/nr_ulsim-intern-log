@@ -740,4 +740,4 @@ if (csv_fd) {
 }
 ```
 - Writes the final results to a CSV file if enabled, including:
-  - SNR, BLER, BER, Effective Throughput
+  - ```cSNR, BLER, BER, Effective Throughput```
