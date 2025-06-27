@@ -532,3 +532,30 @@ ulsch->harq_processes[harq_pid]->F = number_of_filler_bits;
 ```
 - Filler bits (F) are set when TBS is not a multiple of the LDPC lifting size. These bits are ignored during decoding.
 
+## 🔧 3.3 Transport Block CRC & LDPC Encoding
+
+- Adds CRC to the Transport Block (TB) for error detection.
+- Selects LDPC base graph and encoding parameters based on TB size and MCS.
+- Encodes the TB using LDPC encoder and performs rate matching.
+
+```c
+nr_generate_dci(...);  // optional for DCI-based setups
+crc = crc24a(tinput, tb_size_bits);
+nr_segmentation(tinput, ...); // Segments TB if size > 8424 bits
+The internal flow of nr_ulsch_encoding() includes:
+```
+
+- CRC segmentation if TB > 8424 bits.
+
+- LDPC base graph selection based on TB size and code rate.
+
+- LDPC encoding using parity-check matrices.
+
+- Filler bit insertion if necessary.
+
+- Rate matching (puncturing or repetition) to adjust output length.
+
+```c
+nr_ulsch_encoding(...)  // Full LDPC encode + rate matching
+```
+- Output is a modifiable codeword buffer used for modulation in next step.
