@@ -707,3 +707,37 @@ if (ul_errors > 0 && ret >= 0)
     errors_scrambling += estimate_scrambling_errors(decoded_bits, original_bits);
 ```
 - Optionally estimates bit errors due to incorrect scrambling.
+
+## 🔧 3.9 Performance Logging & Statistics
+- Prints simulation results such as BLER, BER, and effective throughput.
+
+- Updates timing distributions if performance logging is enabled.
+
+- Optionally writes CSV-formatted output for later analysis.
+
+```c
+printf("SNR %f: n_errors (%d/%d), false_positive %d/%d\n",
+       SNR, ul_errors, n_trials, false_positive, n_trials);
+```
+- Prints the number of block errors and false positives at the current SNR point.
+
+```c
+printf("errors_scrambling (%d/%d)\n", errors_scrambling, total_bits);
+```
+- Shows the number of bit-level scrambling errors versus the total transmitted bits.
+
+```c
+if (print_perf == 1) {
+  printDistribution(&gNB->phy_proc_rx, table_rx, "Total PHY proc rx");
+  printDistribution(&gNB->ulsch_decoding_stats, table_dec, "ULSCH Decoding");
+}
+```
+- If -p is enabled, prints timing distribution of PHY RX and decoding performance.
+
+```c
+if (csv_fd) {
+  fprintf(csv_fd, "%.2f,%e,%e,%e\n", SNR, bler, ber, eff_rate);
+}
+```
+- Writes the final results to a CSV file if enabled, including:
+  SNR, BLER, BER, Effective Throughput
