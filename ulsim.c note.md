@@ -517,15 +517,15 @@ nr_ulsch_encoding(gNB->ulsch[UE_id],
 
 - The internal flow of nr_ulsch_encoding() includes:
 
-- CRC segmentation if TB > 8424 bits.
+ - CRC segmentation if TB > 8424 bits.
 
-- LDPC base graph selection based on TB size and code rate.
+ - LDPC base graph selection based on TB size and code rate.
 
-- LDPC encoding using parity-check matrices.
+ - LDPC encoding using parity-check matrices.
 
-- Filler bit insertion if necessary.
+ - Filler bit insertion if necessary.
 
-- Rate matching (puncturing or repetition) to adjust output length.
+ - Rate matching (puncturing or repetition) to adjust output length.
 
 ```c
 ulsch->harq_processes[harq_pid]->F = number_of_filler_bits;
