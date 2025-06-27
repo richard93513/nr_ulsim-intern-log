@@ -668,3 +668,42 @@ ul_errors++;
 ul_total++;
 ```
 - Updates total error statistics and frame count.
+
+## 🔧 3.8 Error Analysis & HARQ Logic
+- Analyzes decoding outcomes and determines retransmission needs.
+
+- Updates counters for errors, false positives, and CRC failures.
+
+```c
+if (ret < 0) {
+    ul_errors++;
+    if (ulsch->max_ldpc_iterations == max_ldpc_iterations)
+      crc_errors++;
+    else
+      decoder_errors++;
+}
+```
+- Checks whether LDPC decoding failed (ret < 0).
+
+- Increments ul_errors.
+
+- Distinguishes between decoding errors (decoder_errors) and final CRC errors (crc_errors).
+
+```c
+if (ulsch->last_iteration_cnt == max_ldpc_iterations)
+    decoder_max_it++;
+```
+- Tracks how many decoding attempts reached the maximum number of iterations.
+
+```c
+if (tb_crc_failed) {
+    false_positive++;
+}
+```
+- Records "false positives" — cases where decoding passed but CRC failed.
+
+```c
+if (ul_errors > 0 && ret >= 0)
+    errors_scrambling += estimate_scrambling_errors(decoded_bits, original_bits);
+```
+- Optionally estimates bit errors due to incorrect scrambling.
