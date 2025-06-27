@@ -742,7 +742,7 @@ if (csv_fd) {
 - Writes the final results to a CSV file if enabled, including:
   - ```cSNR, BLER, BER, Effective Throughput```
 
-🔧 4. Finalization
+## 🔧 4. Finalization
 - Cleans up dynamically allocated memory and data structures.
 
 - Closes all open file descriptors (e.g., CSV, input/output config).
