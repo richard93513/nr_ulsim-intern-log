@@ -408,54 +408,45 @@ if (print_perf == 1)
 ```
 - Optionally prints performance timing breakdown after simulation.
 
-## 3. Main Simulation Loop
-This section executes the core uplink simulation trial-by-trial, simulating the entire transmission and reception process for each transport block.
+## 3. Main Simulation Loop (n_trials)
+This section iteratively simulates the full uplink PHY transmission and reception chain. Each trial includes the following sequential steps:
 
 ### 3.1 Transport Block Generation
-- Determines the size of the transport block (TB) based on current MCS and resource allocation.
+- Determines the transport block (TB) size.
 
-- Randomly generates the raw bit data for transmission.
+- Randomly generates the input bit sequence.
 
-- Appends CRC bits for error detection.
+- Appends a CRC checksum for error detection.
 
+### 3.2 LDPC Encoding & Rate Matching
+- Applies LDPC channel coding to the TB.
 
-### 3.2 LDPC Encoding and Rate Matching
-- Encodes the transport block using the LDPC encoder to produce a codeword.
+- Performs rate matching and bit interleaving.
 
-- Performs rate matching and interleaving to adapt the codeword length to the allocated resource.
+- Prepares the encoded data for modulation.
 
-- Prepares encoded bits for modulation.
+### 3.3 Modulation & Resource Mapping
+- Modulates the encoded bits according to the MCS (QPSK, 16QAM, 64QAM, etc.).
 
+- Maps data and DMRS symbols into the uplink resource grid.
 
-### 3.3 Modulation and Resource Grid Mapping
-- Maps encoded bits to modulation symbols according to the selected MCS (QPSK, 16QAM, 64QAM, etc.).
+- Performs IFFT to generate time-domain OFDM symbols.
 
-- Inserts modulation symbols and reference signals (e.g., DMRS) into the uplink resource grid.
-  
-- Converts frequency-domain symbols to time-domain OFDM symbols using IFFT.
+### 3.4 Channel Simulation
+- Passes the transmit signal through an AWGN or TDL channel.
 
+- Simulates multipath fading, noise, and Doppler effects.
 
-### 3.4 Channel Transmission Simulation
-- Transmits the OFDM symbols through the configured channel model (AWGN or multipath fading).
+### 3.5 Receiver Processing
+- Applies FFT, channel estimation, and equalization.
 
-- Simulates real-world physical effects such as noise, fading, and Doppler shift.
+- Demodulates symbols and computes LLRs.
 
+- Performs LDPC decoding and CRC checking.
 
-### 3.5 Receiver Processing and Decoding
-- Performs FFT to convert received time-domain symbols back to the frequency domain.
+### 3.6 Error Analysis & HARQ Logic
+- Updates error statistics based on decoding results.
 
-- Conducts channel estimation and equalization.
+- Triggers HARQ rounds or retransmissions as needed.
 
-- Demodulates symbols to calculate log-likelihood ratios (LLRs).
-
-- Runs LDPC decoding to recover the original data bits.
-
-- Checks CRC to detect transmission errors.
-
-
-### 3.6 Error Checking and HARQ Management
-- Updates error statistics based on CRC check results.
-
-- Simulates HARQ feedback and retransmission logic, tracking rounds and errors.
-
-- Collects statistics such as BLER (block error rate) and throughput for performance analysis.
+- Collects BLER, throughput, and decoding performance metrics.
