@@ -559,3 +559,23 @@ The internal flow of nr_ulsch_encoding() includes:
 nr_ulsch_encoding(...)  // Full LDPC encode + rate matching
 ```
 - Output is a modifiable codeword buffer used for modulation in next step.
+
+## 🔧 3.4 Modulation & DMRS Insertion
+
+- Maps the encoded bits into modulation symbols (QPSK, 16QAM, 64QAM, etc.).
+- Inserts Demodulation Reference Signals (DMRS) into the resource grid.
+- Prepares full transmission grid combining data and reference symbols.
+
+```c
+nr_modulation(codeword, ...);
+```
+- Converts the codeword into complex modulation symbols based on the modulation order.
+
+```c
+nr_generate_dmrs_pusch(...);
+```
+- Generates DMRS symbols used for channel estimation at the receiver.
+```c
+nr_fill_ulsch(...)  // Assembles modulated data and DMRS into resource grid
+```
+- The final output of this stage is a sequence of time-domain samples ready for OFDM processing and transmission.
