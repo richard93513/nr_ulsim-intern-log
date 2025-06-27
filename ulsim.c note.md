@@ -407,3 +407,55 @@ if (print_perf == 1)
   printDistribution(&gNB->phy_proc_rx, table_rx, "Total PHY proc rx");
 ```
 - Optionally prints performance timing breakdown after simulation.
+
+## 3. Main Simulation Loop
+This section executes the core uplink simulation trial-by-trial, simulating the entire transmission and reception process for each transport block.
+
+### 3.1 Transport Block Generation
+- Determines the size of the transport block (TB) based on current MCS and resource allocation.
+
+- Randomly generates the raw bit data for transmission.
+
+- Appends CRC bits for error detection.
+
+
+### 3.2 LDPC Encoding and Rate Matching
+- Encodes the transport block using the LDPC encoder to produce a codeword.
+
+- Performs rate matching and interleaving to adapt the codeword length to the allocated resource.
+
+- Prepares encoded bits for modulation.
+
+
+### 3.3 Modulation and Resource Grid Mapping
+- Maps encoded bits to modulation symbols according to the selected MCS (QPSK, 16QAM, 64QAM, etc.).
+
+- Inserts modulation symbols and reference signals (e.g., DMRS) into the uplink resource grid.
+  
+- Converts frequency-domain symbols to time-domain OFDM symbols using IFFT.
+
+
+### 3.4 Channel Transmission Simulation
+- Transmits the OFDM symbols through the configured channel model (AWGN or multipath fading).
+
+- Simulates real-world physical effects such as noise, fading, and Doppler shift.
+
+
+### 3.5 Receiver Processing and Decoding
+- Performs FFT to convert received time-domain symbols back to the frequency domain.
+
+- Conducts channel estimation and equalization.
+
+- Demodulates symbols to calculate log-likelihood ratios (LLRs).
+
+- Runs LDPC decoding to recover the original data bits.
+
+- Checks CRC to detect transmission errors.
+
+
+### 3.6 Error Checking and HARQ Management
+- Updates error statistics based on CRC check results.
+
+- Simulates HARQ feedback and retransmission logic, tracking rounds and errors.
+
+- Collects statistics such as BLER (block error rate) and throughput for performance analysis.
