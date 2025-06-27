@@ -451,7 +451,7 @@ This section iteratively simulates the full uplink PHY transmission and receptio
 
 - Collects BLER, throughput, and decoding performance metrics.
 
-🔧 3.1 Transport Block Generation
+## 🔧 3.1 Transport Block Generation
 - Calculates the appropriate TB size based on MCS, bandwidth, and other configuration.
 
 - Generates a pseudo-random bit sequence to simulate real uplink data.
