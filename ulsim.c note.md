@@ -579,3 +579,25 @@ nr_generate_dmrs_pusch(...);
 nr_fill_ulsch(...)  // Assembles modulated data and DMRS into resource grid
 ```
 - The final output of this stage is a sequence of time-domain samples ready for OFDM processing and transmission.
+
+## 🔧 3.5 Channel Transmission (AWGN/Fading)
+
+- Transmits the modulated signal through a simulated channel.
+- Supports different models like AWGN or TDL-A/B/C fading.
+- Adds noise or multipath effects to the transmitted signal.
+
+```c
+if (channel_model == AWGN) {
+  add_awgn_noise(txdata, SNR_dB, ...);
+}
+```
+- Adds Additive White Gaussian Noise (AWGN) based on target SNR.
+
+```c
+if (UE2gNB != NULL) {
+  multipath_channel(txdata, rxdata, UE2gNB, ...);
+}
+```
+- Applies fading and multipath channel effects using pre-defined models.
+
+- This stage simulates real-world transmission impairments, preparing the signal for receiver processing.
