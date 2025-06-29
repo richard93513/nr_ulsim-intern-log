@@ -409,368 +409,57 @@ if (print_perf == 1)
 - Optionally prints performance timing breakdown after simulation.
 
 ## 3. Main Simulation Loop (n_trials)
-This section iteratively simulates the full uplink PHY transmission and reception chain. Each trial includes the following sequential steps:
+- This section describes the core PHY simulation steps iterated for each trial in nr_ulsim. Each trial
+simulates the full uplink chain: from bit generation to decoding and performance evaluation.
 
 ### 3.1 Transport Block Generation
-- Determines the transport block (TB) size.
+- Determine TB size based on MCS and resource allocation.
 
-- Randomly generates the input bit sequence.
-
-- Appends a CRC checksum for error detection.
+Generate pseudo-random bitstream and append CRC.
 
 ### 3.2 LDPC Encoding & Rate Matching
-- Applies LDPC channel coding to the TB.
+Segment TB (if needed), select LDPC base graph.
 
-- Performs rate matching and bit interleaving.
-
-- Prepares the encoded data for modulation.
+Apply LDPC encoding and rate matching.
 
 ### 3.3 Modulation & Resource Mapping
-- Modulates the encoded bits according to the MCS (QPSK, 16QAM, 64QAM, etc.).
+Modulate encoded bits (QPSK, 16QAM, etc.).
 
-- Maps data and DMRS symbols into the uplink resource grid.
+Map to resource grid and insert DMRS.
 
-- Performs IFFT to generate time-domain OFDM symbols.
+Generate OFDM symbols via IFFT.
 
 ### 3.4 Channel Simulation
-- Passes the transmit signal through an AWGN or TDL channel.
+Simulate AWGN or fading (e.g., TDL) effects.
 
-- Simulates multipath fading, noise, and Doppler effects.
+Apply noise and/or multipath to transmitted signal.
 
-### 3.5 Receiver Processing
-- Applies FFT, channel estimation, and equalization.
+### 3.5 Receiver Front-End Processing
+Perform FFT and extract received symbols.
 
-- Demodulates symbols and computes LLRs.
+Channel estimation and equalization.
 
-- Performs LDPC decoding and CRC checking.
+### 3.6 LLR Computation
+Compute soft bits (LLRs) from received symbols.
 
-### 3.6 Error Analysis & HARQ Logic
-- Updates error statistics based on decoding results.
+Prepare for LDPC decoder input.
 
-- Triggers HARQ rounds or retransmissions as needed.
+### 3.7 LDPC Decoding & CRC Checking
+Decode with LDPC and check CRC.
 
-- Collects BLER, throughput, and decoding performance metrics.
+Determine decoding success/failure.
 
-## 🔧 3.1 Transport Block Generation
-- Calculates the appropriate TB size based on MCS, bandwidth, and other configuration.
+### 3.8 Error Analysis & HARQ Stats
+Update block error count, CRC and decoder stats.
 
-- Generates a pseudo-random bit sequence to simulate real uplink data.
+Track false positives and decoder iterations.
 
-- Appends CRC for error detection before encoding.
+### 3.9 Performance Logging & Reporting
+Print simulation results (BLER, BER, throughput).
 
-```c
-ulsch->harq_processes[harq_pid]->TBS = nr_compute_tbs(
-  pusch_pdu->mcs,
-  pusch_pdu->mcs_table,
-  pusch_pdu->nb_layers,
-  pusch_pdu->rb_size,
-  pusch_pdu->nr_of_symbols,
-  pusch_pdu->dmrs_symbol_map,
-  pusch_pdu->nr_of_dmrs_symbols,
-  0,  // tb_scaling
-  pusch_pdu->transform_precoding
-);
-```
-- Computes the Transport Block Size (TBS) using 3GPP-defined tables based on modulation scheme, number of layers, and resource allocation.
+Optionally write to CSV and display timing stats.
 
-```c
-for (int i = 0; i < TBS_bytes; i++)
-  ulsch_input_buffer[i] = (unsigned char)(taus() & 0xff);
-```
-- Fills the input buffer with random bits using a seeded Tausworthe generator to ensure reproducibility.
+### 4. Finalization
+Free all allocated buffers and contexts.
 
-```c
-ulsch_input_buffer[TBS_bytes] = 0;
-ulsch_input_buffer[TBS_bytes+1] = 0;
-ulsch_input_buffer[TBS_bytes+2] = 0;
-ulsch_input_buffer[TBS_bytes+3] = 0;
-```
-- Reserves space for the 24-bit CRC at the end of the transport block.
-
-```c
-crc = crc24a(ulsch_input_buffer, TBS_bytes);
-ulsch_input_buffer[TBS_bytes]     = (uint8_t)((crc>>24)&0xff);
-ulsch_input_buffer[TBS_bytes + 1] = (uint8_t)((crc>>16)&0xff);
-ulsch_input_buffer[TBS_bytes + 2] = (uint8_t)((crc>>8 )&0xff);
-ulsch_input_buffer[TBS_bytes + 3] = (uint8_t)((crc    )&0xff);
-```
-- Computes and appends the CRC to the transport block to enable error checking at the receiver.
-
-## 🔧 3.2 LDPC Encoding & Rate Matching
-- Encodes the Transport Block using LDPC (Low-Density Parity-Check) coding.
-
-- Applies segmentation and filler bit insertion if the TB is too large.
-
-- Performs rate matching to match codeword length with the physical layer budget.
-
-```c
-nr_ulsch_encoding(gNB->ulsch[UE_id],
-                  &gNB->frame_parms,
-                  NULL,
-                  &gNB->UL_req,
-                  pusch_pdu,
-                  ulsch_input_buffer,
-                  0, // no SRS
-                  0);
-```
-- Entry point for LDPC encoding process. Takes the prepared TB and frame parameters, and returns a fully encoded and rate-matched codeword.
-
-- The internal flow of nr_ulsch_encoding() includes:
-
-  - CRC segmentation if TB > 8424 bits.
-
-  - LDPC base graph selection based on TB size and code rate.
-
-  - LDPC encoding using parity-check matrices.
-
-  - Filler bit insertion if necessary.
-
-  - Rate matching (puncturing or repetition) to adjust output length.
-
-```c
-ulsch->harq_processes[harq_pid]->F = number_of_filler_bits;
-```
-- Filler bits (F) are set when TBS is not a multiple of the LDPC lifting size. These bits are ignored during decoding.
-
-## 🔧 3.3 Transport Block CRC & LDPC Encoding
-
-- Adds CRC to the Transport Block (TB) for error detection.
-- Selects LDPC base graph and encoding parameters based on TB size and MCS.
-- Encodes the TB using LDPC encoder and performs rate matching.
-
-```c
-nr_generate_dci(...);  // optional for DCI-based setups
-crc = crc24a(tinput, tb_size_bits);
-nr_segmentation(tinput, ...); // Segments TB if size > 8424 bits
-The internal flow of nr_ulsch_encoding() includes:
-```
-
-- CRC segmentation if TB > 8424 bits.
-
-- LDPC base graph selection based on TB size and code rate.
-
-- LDPC encoding using parity-check matrices.
-
-- Filler bit insertion if necessary.
-
-- Rate matching (puncturing or repetition) to adjust output length.
-
-```c
-nr_ulsch_encoding(...)  // Full LDPC encode + rate matching
-```
-- Output is a modifiable codeword buffer used for modulation in next step.
-
-## 🔧 3.4 Modulation & DMRS Insertion
-
-- Maps the encoded bits into modulation symbols (QPSK, 16QAM, 64QAM, etc.).
-- Inserts Demodulation Reference Signals (DMRS) into the resource grid.
-- Prepares full transmission grid combining data and reference symbols.
-
-```c
-nr_modulation(codeword, ...);
-```
-- Converts the codeword into complex modulation symbols based on the modulation order.
-
-```c
-nr_generate_dmrs_pusch(...);
-```
-- Generates DMRS symbols used for channel estimation at the receiver.
-```c
-nr_fill_ulsch(...)  // Assembles modulated data and DMRS into resource grid
-```
-- The final output of this stage is a sequence of time-domain samples ready for OFDM processing and transmission.
-
-## 🔧 3.5 Channel Transmission (AWGN/Fading)
-
-- Transmits the modulated signal through a simulated channel.
-- Supports different models like AWGN or TDL-A/B/C fading.
-- Adds noise or multipath effects to the transmitted signal.
-
-```c
-if (channel_model == AWGN) {
-  add_awgn_noise(txdata, SNR_dB, ...);
-}
-```
-- Adds Additive White Gaussian Noise (AWGN) based on target SNR.
-
-```c
-if (UE2gNB != NULL) {
-  multipath_channel(txdata, rxdata, UE2gNB, ...);
-}
-```
-- Applies fading and multipath channel effects using pre-defined models.
-
-- This stage simulates real-world transmission impairments, preparing the signal for receiver processing.
-
-## 🔧 3.6 Receiver Processing and LLR Computation
-
-- The received signal undergoes demodulation and channel estimation.
-- Computes Log-Likelihood Ratios (LLRs) for each received bit.
-- These LLRs are used in the LDPC decoder.
-
-```c
-nr_ulsch_channel_estimation(rxdata, ...);
-```
-- Estimates the channel from DMRS symbols, needed to equalize received data.
-
-```c
-nr_ulsch_extract_rbs(rxdataF, &ulsch_llr, ...);
-```
-- Extracts resource blocks from the received data for decoding.
-
-```c
-nr_ulsch_llr_computation(rxdataF, ulsch_llr, ...);
-```
-- Performs LLR computation based on modulation type and channel estimate.
-
-- This step is critical for decoding accuracy and ultimately affects BLER performance.
-
-## 🔧 3.7 Decoding & Error Checking
-
-- Applies LDPC decoding to the received LLRs using the base graph and decoding algorithm.
-- Checks the integrity of the decoded transport block via CRC verification.
-- Determines whether the decoding was successful or needs retransmission.
-
-```c
-ret = nr_ulsch_decoding(
-  UE,
-  SNR,
-  gNB_id,
-  UE_id,
-  harq_pid,
-  llr,
-  &TBS,
-  frame,
-  nr_tti_rx,
-  0,
-  get_Qm_ul(pusch_pdu->mcs),
-  N_RB_UL,
-  NULL
-);
-```
-- Calls the uplink shared channel (ULSCH) decoding function, which includes:
-
-- LDPC decoder
-
-- CRC checker
-
-- HARQ status update
-
-```c
-if (ret < 0) {
-  errors++;
-}
-```
-- Increments error count if decoding failed (e.g., CRC not passed).
-
-```c
-ul_errors++;
-ul_total++;
-```
-- Updates total error statistics and frame count.
-
-## 🔧 3.8 Error Analysis & HARQ Logic
-- Analyzes decoding outcomes and determines retransmission needs.
-
-- Updates counters for errors, false positives, and CRC failures.
-
-```c
-if (ret < 0) {
-    ul_errors++;
-    if (ulsch->max_ldpc_iterations == max_ldpc_iterations)
-      crc_errors++;
-    else
-      decoder_errors++;
-}
-```
-- Checks whether LDPC decoding failed (ret < 0).
-
-- Increments ul_errors.
-
-- Distinguishes between decoding errors (decoder_errors) and final CRC errors (crc_errors).
-
-```c
-if (ulsch->last_iteration_cnt == max_ldpc_iterations)
-    decoder_max_it++;
-```
-- Tracks how many decoding attempts reached the maximum number of iterations.
-
-```c
-if (tb_crc_failed) {
-    false_positive++;
-}
-```
-- Records "false positives" — cases where decoding passed but CRC failed.
-
-```c
-if (ul_errors > 0 && ret >= 0)
-    errors_scrambling += estimate_scrambling_errors(decoded_bits, original_bits);
-```
-- Optionally estimates bit errors due to incorrect scrambling.
-
-## 🔧 3.9 Performance Logging & Statistics
-- Prints simulation results such as BLER, BER, and effective throughput.
-
-- Updates timing distributions if performance logging is enabled.
-
-- Optionally writes CSV-formatted output for later analysis.
-
-```c
-printf("SNR %f: n_errors (%d/%d), false_positive %d/%d\n",
-       SNR, ul_errors, n_trials, false_positive, n_trials);
-```
-- Prints the number of block errors and false positives at the current SNR point.
-
-```c
-printf("errors_scrambling (%d/%d)\n", errors_scrambling, total_bits);
-```
-- Shows the number of bit-level scrambling errors versus the total transmitted bits.
-
-```c
-if (print_perf == 1) {
-  printDistribution(&gNB->phy_proc_rx, table_rx, "Total PHY proc rx");
-  printDistribution(&gNB->ulsch_decoding_stats, table_dec, "ULSCH Decoding");
-}
-```
-- If -p is enabled, prints timing distribution of PHY RX and decoding performance.
-
-```c
-if (csv_fd) {
-  fprintf(csv_fd, "%.2f,%e,%e,%e\n", SNR, bler, ber, eff_rate);
-}
-```
-- Writes the final results to a CSV file if enabled, including:
-  - ```cSNR, BLER, BER, Effective Throughput```
-
-## 🔧 4. Finalization
-- Cleans up dynamically allocated memory and data structures.
-
-- Closes all open file descriptors (e.g., CSV, input/output config).
-
-- Prints final messages and exits the program gracefully.
-
-```c
-if (csv_fd)
-  fclose(csv_fd);
-```
-- Closes the CSV output file if one was used.
-
-```c
-if (input_fd)
-  fclose(input_fd);
-if (output_fd)
-  fclose(output_fd);
-```
-- Closes input and output config files if opened.
-
-```c
-free_channel_desc(UE2gNB);
-free_gNB_ulsch(gNB->ulsch[UE_id]);
-free_UE_ulsch(UE->ulsch[0]);
-```
-- Frees memory used for the channel, uplink HARQ buffers, and LDPC structures.
-
-```c
-return ret;
-```
-- Returns the exit code (0 = success, 1 = failure) and ends the simulation.
+Close files and gracefully exit simulation.
