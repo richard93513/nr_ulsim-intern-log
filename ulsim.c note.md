@@ -415,51 +415,179 @@ simulates the full uplink chain: from bit generation to decoding and performance
 ### 3.1 Transport Block Generation
 - Determine TB size based on MCS and resource allocation.
 
-Generate pseudo-random bitstream and append CRC.
+- Generate pseudo-random bitstream and append CRC.
 
 ### 3.2 LDPC Encoding & Rate Matching
-Segment TB (if needed), select LDPC base graph.
+- Segment TB (if needed), select LDPC base graph.
 
-Apply LDPC encoding and rate matching.
+- Apply LDPC encoding and rate matching.
 
 ### 3.3 Modulation & Resource Mapping
-Modulate encoded bits (QPSK, 16QAM, etc.).
+- Modulate encoded bits (QPSK, 16QAM, etc.).
 
-Map to resource grid and insert DMRS.
+- Map to resource grid and insert DMRS.
 
-Generate OFDM symbols via IFFT.
+- Generate OFDM symbols via IFFT.
 
 ### 3.4 Channel Simulation
-Simulate AWGN or fading (e.g., TDL) effects.
+- Simulate AWGN or fading (e.g., TDL) effects.
 
-Apply noise and/or multipath to transmitted signal.
+- Apply noise and/or multipath to transmitted signal.
 
 ### 3.5 Receiver Front-End Processing
-Perform FFT and extract received symbols.
+- Perform FFT and extract received symbols.
 
-Channel estimation and equalization.
+- Channel estimation and equalization.
 
 ### 3.6 LLR Computation
-Compute soft bits (LLRs) from received symbols.
+- Compute soft bits (LLRs) from received symbols.
 
-Prepare for LDPC decoder input.
+- Prepare for LDPC decoder input.
 
 ### 3.7 LDPC Decoding & CRC Checking
-Decode with LDPC and check CRC.
+- Decode with LDPC and check CRC.
 
-Determine decoding success/failure.
+- Determine decoding success/failure.
 
 ### 3.8 Error Analysis & HARQ Stats
-Update block error count, CRC and decoder stats.
+- Update block error count, CRC and decoder stats.
 
-Track false positives and decoder iterations.
+- Track false positives and decoder iterations.
 
 ### 3.9 Performance Logging & Reporting
-Print simulation results (BLER, BER, throughput).
+- Print simulation results (BLER, BER, throughput).
 
-Optionally write to CSV and display timing stats.
+- Optionally write to CSV and display timing stats.
 
 ### 4. Finalization
-Free all allocated buffers and contexts.
+- Free all allocated buffers and contexts.
 
-Close files and gracefully exit simulation.
+- Close files and gracefully exit simulation.
+
+## 🔧 3.1 Transport Block Generation
+
+- Calculates the appropriate TB size based on MCS, bandwidth, and other configuration.
+- Generates a pseudo-random bit sequence to simulate real uplink data.
+- Appends CRC for error detection before encoding.
+
+```c
+ulsch->harq_processes[harq_pid]->TBS = nr_compute_tbs(...);
+```
+- Computes the Transport Block Size (TBS) using 3GPP-defined tables.
+
+```c
+for (int i = 0; i < TBS_bytes; i++)
+  ulsch_input_buffer[i] = (unsigned char)(taus() & 0xff);
+```
+- Generates pseudo-random bits using a seeded Tausworthe generator.
+
+```c
+crc = crc24a(ulsch_input_buffer, TBS_bytes);
+// Appends 24-bit CRC at the end of the buffer
+```
+## 🔧 3.2 LDPC Encoding & Rate Matching
+- Segments the TB if it exceeds 8424 bits.
+
+- Selects LDPC base graph based on TB size and code rate.
+
+- Applies LDPC encoding using parity-check matrices.
+
+- Inserts filler bits (if required) and performs rate matching.
+
+```c
+nr_ulsch_encoding(...);
+```
+- Main entry point for LDPC encoding + rate matching.
+
+```c
+ulsch->harq_processes[harq_pid]->F = number_of_filler_bits;
+```
+- Stores number of filler bits used in rate matching.
+
+## 🔧 3.3 Modulation & Resource Mapping
+- Converts encoded bits into complex modulation symbols (e.g., QPSK, 16QAM).
+
+- Generates DMRS and maps both data + DMRS into the uplink resource grid.
+
+- Performs IFFT to prepare time-domain OFDM symbols.
+
+```c
+nr_modulation(...);
+nr_generate_dmrs_pusch(...);
+nr_fill_ulsch(...);
+```
+## 🔧 3.4 Channel Simulation
+- Passes modulated signal through a simulated channel (AWGN or fading).
+
+- Adds noise and/or multipath distortion to simulate realistic transmission.
+
+```c
+add_awgn_noise(...);
+multipath_channel(...);
+```
+## 🔧 3.5 Receiver Front-End Processing
+- Applies FFT on received signal.
+
+- Estimates the channel based on DMRS.
+
+- Equalizes the received symbols.
+
+```c
+nr_ulsch_channel_estimation(...);
+nr_ulsch_extract_rbs(...);
+```
+## 🔧 3.6 LLR Computation
+- Computes Log-Likelihood Ratios (LLRs) from the received symbols.
+
+- Prepares soft bits as input to LDPC decoder.
+
+```c
+nr_ulsch_llr_computation(...);
+```
+## 🔧 3.7 LDPC Decoding & CRC Checking
+- Performs LDPC decoding on LLRs.
+
+- Verifies decoding success via CRC.
+
+```c
+ret = nr_ulsch_decoding(...);
+if (ret < 0) errors++;
+ul_errors++;
+ul_total++;
+```
+## 🔧 3.8 Error Analysis & HARQ Stats
+- Updates block error statistics.
+
+- Tracks CRC failures, decoding failures, and false positives.
+
+- Counts iterations and optionally estimates scrambling errors.
+
+```c
+if (ret < 0) {...}
+if (ulsch->last_iteration_cnt == max_ldpc_iterations) decoder_max_it++;
+if (tb_crc_failed) false_positive++;
+```
+## 🔧 3.9 Performance Logging & Reporting
+- Displays and logs simulation metrics: BLER, BER, effective throughput.
+
+- Prints timing breakdown (if enabled).
+
+- Optionally writes results to CSV file.
+
+```c
+printf("SNR %f: n_errors (%d/%d)...\n");
+if (print_perf) printDistribution(...);
+if (csv_fd) fprintf(csv_fd, ...);
+```
+## 🔧 4. Finalization
+- Closes files and releases allocated memory.
+
+- Cleans up channel and LDPC-related structures.
+
+```c
+if (csv_fd) fclose(csv_fd);
+free_channel_desc(...);
+free_gNB_ulsch(...);
+return ret;
+```
+- Ends the simulation loop and returns exit status.
