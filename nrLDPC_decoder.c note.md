@@ -2,11 +2,11 @@
 ## nrLDPC_decoder.c
 ---
 ## File Path
-
 ** openair1/PHY/CODING/nrLDPC_decoder/nrLDPC_decoder.c**
+
 Implements the core 5G LDPC decoder logic. Performs iterative decoding of LDPC codewords using belief propagation with optional AVX acceleration.
 ---
-Overview
+## Overview
 
 The LDPC decoder in OpenAirInterface (OAI) executes soft-input soft-output (SISO) decoding for NR LDPC codes. It uses a layered belief-propagation approach across check nodes (CN) and bit nodes (BN), with options for optimized AVX vector implementations for performance.
 
