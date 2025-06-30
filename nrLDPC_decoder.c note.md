@@ -24,7 +24,7 @@ This function is responsible for:
 
 ## 📈 LDPC Decoder Core Flow
 
-file:///home/richard93513/%E5%9C%96%E7%89%87/%E8%9E%A2%E5%B9%95%E5%BF%AB%E7%85%A7/%E8%9E%A2%E5%B9%95%E5%BF%AB%E7%85%A7%202025-07-01%2001-52-59.png
+![螢幕快照 2025-07-01 01-52-59](https://github.com/user-attachments/assets/c1a9b137-0fd3-41aa-bbca-dfa81d09d471)
 
 
 ## 🔍 Module Descriptions
