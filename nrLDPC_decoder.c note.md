@@ -24,19 +24,8 @@ This function is responsible for:
 
 ## 📈 LDPC Decoder Core Flow
 
-graph TD
-    A[Start Decoder] --> B[Load Parameters / Buffers]
-    B --> C[Initial BN Processing (BN->CN)]
-    C --> D[First CN Processing (CN->BN)]
-    D --> E[First Parity Check or skip CRC]
-    E --> F{Passed?}
-    F -- No --> G[Iterative Decoding Loop]
-    G --> H[CN Processing]
-    H --> I[CN->BN Message]
-    I --> J[BN Processing]
-    J --> E
-    F -- Yes --> K[Output LLR or Bits]
-    K --> L[End]
+file:///home/richard93513/%E5%9C%96%E7%89%87/%E8%9E%A2%E5%B9%95%E5%BF%AB%E7%85%A7/%E8%9E%A2%E5%B9%95%E5%BF%AB%E7%85%A7%202025-07-01%2001-52-59.png
+
 
 ## 🔍 Module Descriptions
 
