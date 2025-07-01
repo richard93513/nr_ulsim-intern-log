@@ -47,7 +47,56 @@ input_bits = randi([0 1], N, 1);
   - 每個元素為 lifting size Z 的右循環移位量，-1 表示零矩陣（空白）
 
 - 依照 3GPP 標準表格，將各 row 與 column index 對應的偏移值填入，形成整體解碼骨架。
+- 我成功完成了 BG1 第 0 行的 MATLAB 程式碼建構，範例如下：
+```matlab
+clear; clc;
+% 所有 column index（row=0 資料中有資料的那些）
+col_index_list = [0, 1, 2, 3, 5, 6, 9, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23];
 
+% 每個 column index 對應的 set index（shift 數值，8 個一組）
+col_shift_values = [
+    250, 307,  73, 223, 211, 294,   0, 135;   % col 0
+     69,  19,  15,  16, 198, 118,   0, 227;   % col 1
+    226,  50, 103,  94, 188, 167,   0, 126;   % col 2
+    159, 369,  49,  91, 186, 330,   0, 134;   % col 3
+    100, 181, 240,  74, 219, 207,   0,  84;   % col 5
+     10, 216,  39,  10,   4, 165,   0,  83;   % col 6
+     59, 317,  15,   0,  29, 243,   0,  53;   % col 9
+    229, 288, 162, 205, 144, 250,   0, 225;   % col 10
+    110, 109, 215, 216, 116,   1,   0, 205;   % col 11
+    191,  17, 164,  21, 216, 339,   0, 128;   % col 12
+      9, 357, 133, 215, 115, 201,   0,  75;   % col 13
+    195, 215, 298,  14, 233,  53,   0, 135;   % col 15
+     23, 106, 110,  70, 144, 347,   0, 217;   % col 16
+    190, 242, 113, 141,  95, 304,   0, 220;   % col 18
+     35, 180,  16, 198, 216, 167,   0,  90;   % col 19
+    239, 330, 189, 104,  73,  47,   0, 105;   % col 20
+     31, 346,  32,  81, 261, 188,   0, 137;   % col 21
+      1,   1,   1,   1,   1,   1,   0,   1;   % col 22
+      0,   0,   0,   0,   0,   0,   0,   0    % col 23
+];
+
+% 初始化 H_base_row 為 -1
+H_base_row = -1 * ones(1, 544);  % 68*8
+
+% 將有定義的 shift 填入對應位置
+for k = 1:length(col_index_list)
+    col = col_index_list(k);
+    shifts = col_shift_values(k, :);  % 對應的 shift 數值
+    for i = 0:7
+        idx = col * 8 + i + 1;  % MATLAB index 起始為 1
+        H_base_row(idx) = shifts(i+1);
+    end
+end
+```
+- col_index_list：只列出這行中有定義的 column index（非空白）
+
+- col_shift_values：每個 column 下，8 個 set index 的 shift 值（對應 5G NR LDPC base graph 裡的 cyclic shift）
+
+- H_base_row：代表該行對應完整 68 個 column，每個 column 有 8 個 set index，所以長度是 68*8=544
+沒定義的位置用 -1 表示空白（無邊連接）
+
+- for 迴圈：依照 column 和 set index 計算位置，放入對應的 shift 值
 ### 4. Min-Sum 解碼架構
 ```matlab
 % 初始化訊息
