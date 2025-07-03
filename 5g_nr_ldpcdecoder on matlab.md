@@ -136,3 +136,96 @@ end
   - 實作 BER 測試並與 OAI 結果比對
 
   - 探索 SIMD 加速在 MATLAB 的模擬可能性
+
+# 5G NR LDPC Base Graph 1 擴展筆記
+1. Base Graph BG1 結構
+5G NR 中的 LDPC 使用兩種 Base Graph（BG1 與 BG2）。
+
+本次研究的是 BG1，其矩陣大小為：
+46 × 68
+表示有 46 個 check node 區塊、68 個 variable node 區塊。
+
+2. Set Index 與位移量的理解
+在 3GPP 規格（如 TS 38.212）中，BG1 的每個元素最多包含 8 條邊（Set Index 0~7）。
+
+每個 set index 對應一個位移量，為一個整數：
+
+-1 表示該邊不存在
+
+0 ~ Z−1 表示右移多少單位
+
+每個位置可以有多個 shift 值，實際代表多條 check-variable 邊。
+
+3. 壓縮矩陣建立與展開原理
+壓縮矩陣建立（程式）
+OAI 原始碼將 BG1 拆為 8 個矩陣（BG1_I0 ~ BG1_I7），每個都是 46×68
+
+程式中將這 8 個矩陣逐個依欄位拼接，變成一個 46×544 的大矩陣：
+
+matlab
+複製程式碼
+for row = 1:46
+    for col = 1:68
+        for block = 0:7
+            varName = sprintf('BG1_I%d', block);         % 組出變數名 BG1_Ix
+            H_col = (col - 1)*8 + block + 1;              % 計算壓縮矩陣的欄位位置
+            H(row, H_col) = eval([varName '(' num2str(row) ',' num2str(col) ')']);
+        end
+    end
+end
+結果矩陣 H 即為壓縮格式，大小為：
+
+複製程式碼
+46 × 544  = 46 × (68×8)
+展開原理
+每個 BG1(𝑖,𝑗) 位置實際包含 8 個 set index 對應的 shift 值
+
+展開時，對每個 shift 值建立一個大小為 Z×Z 的單位矩陣，右循環位移指定次數
+
+多個 shift 結果相加（mod 2）後，放入大矩陣的對應區塊中
+
+最終生成的 parity check matrix 大小為：
+
+scss
+複製程式碼
+(46 × Z) × (68 × Z)
+4. 展開程式解釋（expand_ldpc_H_multi_shift）
+函式輸入：
+
+H_compact：46×544 的壓縮 shift 矩陣
+
+Z：lifting size（如 Z = 384）
+
+函式輸出：
+
+H_expanded：實際解碼用的 LDPC parity check matrix，大小為 (46×Z) × (68×Z)
+
+主要流程：
+
+對每個 base graph 元素提取其 8 個 shift 值
+
+每個 shift 值產生一個右移的單位矩陣
+
+多個 shift 結果進行 XOR 疊加
+
+放入展開後矩陣的對應 Z×Z 區塊位置
+
+全部以 sparse 格式儲存，節省記憶體
+
+5. 檢查與驗證
+展開後的矩陣大小為：
+17664 × 26112（對應 Z = 384）
+
+可使用以下方式確認正確性：
+
+size(H_expanded)
+
+nnz(H_expanded) 查看非零元素個數
+
+spy(H_expanded) 觀察整體稀疏結構
+
+full(H_expanded(1:Z,1:Z)) 查看細節區塊
+
+6. 結論
+透過此方法，可以從 3GPP 的壓縮 shift 矩陣準確展開出 LDPC 解碼所需的 parity check 矩陣 H_expanded，
+可用於後續 Min-Sum、BP 等解碼流程，符合 5G NR 實際實作需求。
