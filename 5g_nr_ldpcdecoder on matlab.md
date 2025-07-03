@@ -188,6 +188,70 @@ end
 - 最終生成的 parity check matrix 大小為：(46 × Z) × (68 × Z)
 
 ## 4. 展開程式解釋（expand_ldpc_H_multi_shift）
+```matlab
+function H_expanded = expand_ldpc_H_multi_shift(H_compact, Z)
+% 展開 LDPC 壓縮矩陣（每個位置最多 8 個 shift）成完整 H 矩陣
+%
+% 輸入：
+%   H_compact - 大小為 46×544 的矩陣（即 68×8，每個位置最多有 8 個 shift）
+%   Z         - lifting size（如 Z = 384）
+%
+% 輸出：
+%   H_expanded - 展開後的 (46×Z) × (68×Z) 的稀疏矩陣（全部由 0/1 組成）
+
+    edges_per_pos = 8;  % 每個 base graph 位置最多儲存 8 個 shift（對應 8 條邊）
+
+    [rows_bg, ~] = size(H_compact);  % rows_bg = 46，對應 base graph 的列數（檢查節點數）
+    cols_bg = 68;  % 固定為 BG1 的欄數（變數節點區塊數）
+
+    % 建立空的稀疏矩陣，大小為 (46×Z) × (68×Z)
+    % 每個 base graph 的元素會被展開為一個 Z×Z 子矩陣
+    H_expanded = sparse(rows_bg * Z, cols_bg * Z);
+
+    % 外層迴圈：從第 1 列跑到第 46 列（對應 base graph 的行）
+    for i = 1:rows_bg
+        % 中層迴圈：從第 1 行跑到第 68 行（對應 base graph 的列）
+        for j = 1:cols_bg
+            % 取得這個位置上所有的 shift index（共最多 8 個）
+            % H_compact(i, (j-1)*8+1 : j*8) 就是該位置的 8 個 shift 值
+            shifts = H_compact(i, (j-1)*edges_per_pos + (1:edges_per_pos));
+
+            % 初始化一個 Z×Z 的全零矩陣，準備把多個循環矩陣疊加起來
+            submat = zeros(Z,Z);
+
+            % 內層迴圈：最多 8 個 shift index，依序疊加對應的循環位移單位矩陣
+            for k = 1:edges_per_pos
+                shift_val = shifts(k);  % 取得第 k 條邊的位移量
+                if shift_val >= 0 && shift_val < Z
+                    % 建立一個右移 shift_val 的單位矩陣，並與 submat 做 XOR 疊加
+                    submat = mod(submat + circshift(eye(Z), [0, shift_val]), 2);
+                end
+            end
+
+            % 計算展開後這一塊 Z×Z 子矩陣在大矩陣中的 row 範圍
+            row_idx = (i-1)*Z + (1:Z);
+            % 計算展開後這一塊 Z×Z 子矩陣在大矩陣中的 column 範圍
+            col_idx = (j-1)*Z + (1:Z);
+
+            % 把組合好的 Z×Z 子矩陣放入對應的大矩陣區塊中
+            H_expanded(row_idx, col_idx) = submat;
+        end
+    end
+end
+```
+% 主程式開始
+Z = 384;  % 設定 lifting size，必須 ≥ 最大 shift index 才合法（此例配合 5G NR BG1）
+
+H = nr5g_ldpc_H_BG1_Z384();  % 載入 46×544 的 base graph shift index 矩陣（你自己寫的 function）
+
+H_expanded = expand_ldpc_H_multi_shift(H, Z);  % 將壓縮的 shift index 矩陣展開為真正的 parity check matrix
+
+% 顯示展開後矩陣的大小（應為 17664 × 26112）
+fprintf("H_expanded size: %d x %d\n", size(H_expanded,1), size(H_expanded,2));
+
+% 畫出展開後的稀疏矩陣結構圖
+spy(H_expanded); 
+title('展開後的 H 矩陣 (Z=384)');
 函式輸入：
 
 - H_compact：46×544 的壓縮 shift 矩陣
@@ -217,10 +281,13 @@ end
 - 可使用以下方式確認正確性：
 
   - size(H_expanded)
-
+```matlab
+H_expanded size: 17664 x 26112
+```
   - nnz(H_expanded) 查看非零元素個數
 
   - spy(H_expanded) 觀察整體稀疏結構
+![untitled](https://github.com/user-attachments/assets/d926ef89-ef2e-4594-8c39-05efe95adfae)
 
   - full(H_expanded(1:Z,1:Z)) 查看細節區塊
 
