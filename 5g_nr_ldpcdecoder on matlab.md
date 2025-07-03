@@ -142,7 +142,9 @@ end
 - 5G NR 中的 LDPC 使用兩種 Base Graph（BG1 與 BG2）。
 
 - 本次研究的是 BG1，其矩陣大小為：
+  
   46 × 68
+  
   表示有 46 個 check node 區塊、68 個 variable node 區塊。
 
 ## 2. Set Index 與位移量的理解
@@ -162,7 +164,7 @@ end
 
 - 程式中將這 8 個矩陣逐個依欄位拼接，變成一個 46×544 的大矩陣：
 
-``matlab
+```matlab
 
 for row = 1:46
     for col = 1:68
