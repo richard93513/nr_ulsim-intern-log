@@ -166,6 +166,10 @@ end
 
 ```matlab
 
+BG1_I0=[];
+BG1_I1=[];
+......
+BG1_I7=[];
 for row = 1:46
     for col = 1:68
         for block = 0:7
