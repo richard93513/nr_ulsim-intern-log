@@ -161,7 +161,7 @@ end
 ## 3. 壓縮矩陣建立與展開原理
 ### 壓縮矩陣建立
 - OAI 原始碼將 BG1 拆為 8 個矩陣（BG1_I0 ~ BG1_I7），每個都是 46×68
-
+  - 網址:https://gitlab.eurecom.fr/oai/openairinterface5g/-/tree/develop/openair1/PHY/CODING/nrLDPC_decoder_LYC/bgs
 - 程式中將這 8 個矩陣逐個依欄位拼接，變成一個 46×544 的大矩陣：
 
 ```matlab
