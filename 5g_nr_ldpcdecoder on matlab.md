@@ -238,7 +238,7 @@ function H_expanded = expand_ldpc_H_multi_shift(H_compact, Z)
         end
     end
 end
-```
+
 % 主程式開始
 Z = 384;  % 設定 lifting size，必須 ≥ 最大 shift index 才合法（此例配合 5G NR BG1）
 
@@ -252,6 +252,8 @@ fprintf("H_expanded size: %d x %d\n", size(H_expanded,1), size(H_expanded,2));
 % 畫出展開後的稀疏矩陣結構圖
 spy(H_expanded); 
 title('展開後的 H 矩陣 (Z=384)');
+```
+
 函式輸入：
 
 - H_compact：46×544 的壓縮 shift 矩陣
