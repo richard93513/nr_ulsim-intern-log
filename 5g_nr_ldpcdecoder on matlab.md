@@ -300,3 +300,89 @@ title('展開後的 H 矩陣 (Z=384)');
 ## 6. 結論
 透過此方法，可以從 3GPP 的壓縮 shift 矩陣準確展開出 LDPC 解碼所需的 parity check 矩陣 H_expanded，
 可用於後續 Min-Sum、BP 等解碼流程，符合 5G NR 實際實作需求。
+
+# 2025/07/05 - LDPC 模擬流程嘗試紀錄
+
+## 目標
+
+建立一個模擬流程，驗證 5G NR LDPC Min-Sum 解碼器在 QPSK + AWGN 通道下的錯誤率表現，使用 Base Graph 1，固定 lifting size $Z = 384$。
+
+---
+
+## 一、模擬流程設計與初始嘗試
+
+最初設計的流程包括：
+
+1. 隨機產生資訊位元 `bits`；
+2. 未實作編碼，直接補 0 模擬為 LDPC codeword；
+3. 使用 QPSK 調變；
+4. 添加 AWGN 雜訊；
+5. 計算 soft LLR；
+6. 使用展開後的檢查矩陣 `H` 執行 Min-Sum 解碼。
+
+### 問題
+
+該流程完全無法成功完成模擬。Min-Sum 解碼器無法收敗，無法通過 parity check，原因是輸入訊號未經 LDPC 編碼，因此與 `H` 不相容，造成解碼器無法有效運作。
+
+---
+
+## 二、嘗試加入 LDPC 編碼
+
+進一步嘗試補上編碼流程，使用已展開之 `H_expanded_BG1_Z384`，進行下列操作：
+
+* 手動撰寫 `ldpc_encode_simple()`，嘗試將資訊 bits 與 `H` 矩陣求 parity bits；
+* 嘗試將 `sparse` 轉為 `full` 以使用 MATLAB `gf` 做行運算；
+* 降低 SNR、傳輸區塊數、疊代次數。
+
+### 問題
+
+即使正確分離 `H = [H1 | H2]`，在進行 dense 矩陣運算求 parity bits 時，因 `H`為 17664×26112 的大矩陣，造成記憶體與速度環節，模擬程式執行數小時仍無法完成。
+
+---
+
+## 三、學習過程：QPSK LLR 與 Min-Sum 解碼器
+
+儘管模擬流程上未成功執行，過程中釋清了下列關鍵模組運作方式：
+
+### QPSK 調變與 LLR 計算
+
+* 每兩個 bit 組成一個 symbol，使用 Gray Mapping 對應至 QPSK 星座點 {00→1+1j, 01→-1+1j, 10→1-1j, 11→-1-1j}，並除以 $\sqrt{2}$ 以正規化功率。
+
+* 接收端收到一串複數符號 $r$，每個 symbol 對應兩個 bit，需針對每一個 bit 計算 soft LLR 值。
+
+* 對於每個 bit，將所有 QPSK 星座點分為「該 bit = 0」與「該 bit = 1」的子集合，計算接收到的符號 $r$ 與各子集合內點之歐幾里得距離平方，分別取最小值：
+
+  $$
+  LLR_b = \min_{x: b=0} ||r - x||^2 - \min_{x: b=1} ||r - x||^2
+  $$
+
+* 此為 Max-Log approximation，提供每個 bit 的 soft decision 資訊供 LDPC 解碼使用。
+
+### Min-Sum 解碼流程
+
+* 首先以 channel LLR 初始化 bit node 對 check node 的輸出訊息（bit-to-check messages），矩陣大小與 parity-check matrix $H$ 相同。
+
+* 每次疊代包含以下步驟：
+
+  1. **check node 更新（CN）**：對每個 check node，針對其連接的每個 bit node，從其他相連的 bit node 接收的訊息中取「符號積」與「最小絕對值」，送出更新後的訊息給該 bit node。
+  2. **bit node 更新（BN）**：對每個 bit node，將來自其他 check node 的訊息與原始 channel LLR 相加，更新送往各 check node 的訊息。
+  3. **總 LLR 結合**：對每個 bit node，合併原始 LLR 與所有 check-to-bit 訊息，進行硬判斷（LLR < 0 判為 1，否則 0）。
+  4. **檢查 parity check 是否滿足**：若所有檢查等式皆為 0，提早結束解碼。
+
+* 此流程為典型 Min-Sum 解碼演算法，計算量較低但仍具備不錯的效能，適用於硬體與模擬實作。
+
+---
+
+## 四、重要結論與後續規劃
+
+### 重要理解
+
+* **LDPC 解碼器必須配合實際編碼過的 codeword 才能正確運作**。
+* **隨機產生資料直接補 0 無法滿足 parity constraints，解碼器一定會失敗。**
+
+### 後續方向
+
+1. 改用 base graph 結構實作 encoder，避免操作展開矩陣；
+2. 改用 lifting size $Z$ 較小的版本進行測試（如 $Z = 64$）；
+3. 測試 OAI 中 `ldpctest` 的 codeword 產生方式，是否以標準流程驗證 LDPC 編碼器與解碼器功能；
+4. 若無法成功實作 encoder，可考慮預先產生已知正確的 LDPC codeword 再行測試。
