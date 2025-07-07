@@ -386,3 +386,200 @@ title('展開後的 H 矩陣 (Z=384)');
 2. 改用 lifting size $Z$ 較小的版本進行測試（如 $Z = 64$）；
 3. 測試 OAI 中 `ldpctest` 的 codeword 產生方式，是否以標準流程驗證 LDPC 編碼器與解碼器功能；
 4. 若無法成功實作 encoder，可考慮預先產生已知正確的 LDPC codeword 再行測試。
+
+# 5G NR LDPC 系統實作與除錯筆記
+
+## 一、系統分工與模組化程式架構
+
+整體實作分為兩個主要模組：發送端（Tx）與接收端（Rx），所有程序皆以 MATLAB 撰寫，並使用 NR Base Graph 1，lifting size 為 Z = 384。
+
+### 1.1 發送端（Tx）流程
+
+發送端包含以下步驟：
+
+1. 產生隨機資訊位元 `tx_bits`，長度為 `K = 22 * Z`。
+2. 使用 `ldpc_encode_neighbor()` 函數，透過鄰接表 `cn_to_vn` 對資訊進行編碼，產生長度為 `N = 68 * Z` 的 codeword。
+3. 以 Gray 編碼方式進行 QPSK 調變，符號映射順序為：
+
+   ```
+   [1+1j, -1+1j, -1-1j, 1-1j] / sqrt(2)  對應 bit pair 為 00, 01, 11, 10
+   ```
+
+   使用 bi2de + Gray 索引法對應。
+4. 通道加入 AWGN 噪聲，並以 SNR = 20 dB 模擬。
+5. 接收端以最小距離近似法計算每個符號對應的 soft-bit LLR，轉為 `rx_llr`。
+6. 儲存必要模擬資料至 `.mat` 檔：
+
+   ```
+   save(filename, 'rx_llr', 'tx_bits', 'snr_db');
+   ```
+
+### 1.2 接收端（Rx）流程
+
+接收端包含以下步驟：
+
+1. 載入通道輸出檔案 `ldpc_channel_output.mat`。
+2. 使用鄰接表 `cn_to_vn`, `vn_to_cn` 建立解碼流程。
+3. 執行 `ldpc_decode_min_sum_neighbor()` 以 Min-Sum 方法解碼。
+4. 統計錯誤率與 parity check failure 數：
+
+   ```
+   n_err = sum(decoded(1:K) ~= tx_bits);
+   ber = n_err / K;
+   ```
+
+---
+
+## 二、轉用鄰接表的原因與動機
+
+起初嘗試以展開後的 `H_expanded` 進行矩陣編碼，期望推導出 `H = [P | I]` 結構並導出系統式生成矩陣 `G = [I | Pᵗ]`。
+
+但實作中遇到重大困難：
+
+* `H_expanded` 為 17664×26112 的稀疏矩陣，對其進行矩陣分塊與秩判斷（如 `rank(P)`）時會出錯：
+
+  ```
+  Error using svd: SVD does not support sparse matrices.
+  ```
+
+* 強制轉為 full matrix 造成記憶體不足或效能過差。
+
+因此決定**全面改用鄰接表方式**：
+
+* 使用 `build_neighbor_tables(H)` 將 `H` 轉為 `cn_to_vn` 和 `vn_to_cn` 結構；
+* 可節省大量記憶體，並利於建構解碼流程（例如 message passing）。
+
+---
+
+## 三、改用鄰接表後仍無法正確收斂
+
+在轉用鄰接表後，整體 Min-Sum 解碼流程得以順利執行：
+
+* 解碼函數 `ldpc_decode_min_sum_neighbor()` 可正常進行疊代（最大達 300 次）；
+* 但觀察每輪的錯誤 bit 數與 parity check 數，皆呈現震盪且不收斂：
+
+  ```
+   Iteration 1: 8772
+   Iteration 2: 8798
+   Iteration 3: 8940
+   ...
+   Iteration 20: 8830
+  ```
+
+即使將 SNR 提升至 20dB，錯誤率仍然非常高（約 0.91），明顯與理論不符。
+
+---
+
+## 四、深入追查：發現是編碼錯誤而非解碼錯誤
+
+為驗證編碼是否正確，使用下列方式檢查 codeword 是否滿足 parity：
+
+```matlab
+syndrome = mod(H * codeword, 2);
+fprintf("\u2753 parity check failure: %d\n", sum(syndrome));
+```
+
+實際結果：
+
+```
+parity check failure: 8398
+```
+
+代表編碼產生之 codeword 並不合法，並未滿足 `H * cw = 0`。
+
+---
+
+## 五、嘗試修正與驗證方式
+
+以下列出幾項曾經嘗試過但仍無效的方向：
+
+### 5.1 檢查鄰接表正確性
+
+使用 `check_neighbor_table_consistency()` 比對 `H_expanded` 與 `cn_to_vn`, `vn_to_cn`：
+
+```
+✅ 鄰接表與 H 非零元素數一致（798720 條邊）
+✅ cn_to_vn 與 vn_to_cn 配對一致，鄰接表正確！
+```
+
+結論：鄰接表結構與 H 矩陣一致，問題非出於此。
+
+### 5.2 Gray 編碼調變
+
+原先 QPSK mapping 並非 Gray 順序，會使錯誤擴散。後來改為：
+
+```matlab
+symbol_map = [1+1j, -1+1j, -1-1j, 1-1j] / sqrt(2);
+bit_decimal = bi2de(codeword_pairs, 'left-msb');
+gray_index = bitxor(bit_decimal, floor(bit_decimal / 2)) + 1;
+tx_symbols = symbol_map(gray_index).';
+```
+
+LLR 計算也需根據 gray\_bits 重新對應：
+
+```matlab
+gray_bits = [0 0; 0 1; 1 1; 1 0];
+mask0 = gray_bits(:, b) == 0;
+mask1 = gray_bits(:, b) == 1;
+```
+
+此改法提升解碼正確性，但無法解決根本問題（codeword 不合法）。
+
+### 5.3 加入 Offset 與 Damping（解碼層面）
+
+實驗中嘗試於 Min-Sum 加入 Offset 或 Damping，但 BER 仍維持在 0.91，說明問題出在傳送端。
+
+---
+
+## 六、分析 ldpc\_encode\_neighbor() 錯誤邏輯
+
+```matlab
+function codeword = ldpc_encode_neighbor(info_bits, cn_to_vn, N)
+    K = length(info_bits);
+    codeword = zeros(N, 1);
+    codeword(1:K) = info_bits;
+
+    for m = 1:length(cn_to_vn)
+        idxs = cn_to_vn{m};
+        parity = mod(sum(codeword(idxs)), 2);
+
+        if parity ~= 0
+            flipped = false;
+            for j = 1:length(idxs)
+                col = idxs(j);
+                if col > K
+                    codeword(col) = mod(codeword(col) + 1, 2);
+                    flipped = true;
+                    break;
+                end
+            end
+            if ~flipped
+                for j = 1:length(idxs)
+                    col = idxs(j);
+                    if col <= K
+                        codeword(col) = mod(codeword(col) + 1, 2);
+                        break;
+                    end
+                end
+            end
+        end
+    end
+end
+```
+
+此方法逐個 CN 校驗 parity，若不符則「反轉其中一個位元」。但該方法並無保證所有 CN 同時滿足，只是局部修正，導致整體仍不合法。
+
+---
+
+## 七、計畫改用系統式方式推導編碼器
+
+後續預定採取以下方法：
+
+1. 使用 `H_expanded` 建立 `H = [A | B]`，嘗試重排為 `H = [P | I]` 結構。
+2. 若成功，則可導出 `G = [I | Pᵗ]`，並直接使用矩陣乘法產生合法 codeword。
+3. 重新建立鄰接表，以對應重排後的 H。
+4. 確保 parity check 完全正確後，再重新回到解碼模組驗證性能。
+
+---
+
+**結論：目前最大問題出在編碼端產生之 codeword 並不合法，應回歸原始 H 矩陣，以系統式方法設計 encoder，確保 parity check 正確。**
