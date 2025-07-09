@@ -584,7 +584,7 @@ end
 
 **結論：目前最大問題出在編碼端產生之 codeword 並不合法，應回歸原始 H 矩陣，以系統式方法設計 encoder，確保 parity check 正確。**
 
-# 2025/07/09 - LDPC 模擬流程 實作與除錯紀錄（加強詳盡版）
+# 2025/07/09 - LDPC 模擬流程 實作與除錯紀錄
 
 ## 一、系統分工與模組化程式架構
 
@@ -610,7 +610,7 @@ end
 
 - 使用鄰接表 `cn_to_vn` 及 `ldpc_encode_neighbor()` 函數進行編碼。  
 - 利用 spy 或類似函數繪製展開後的 H 矩陣點圖（藍點代表 1）。  
-- 與公開 LinkedIn 文章的標準點圖比較，發現右半部分（col 23Z~67Z）缺乏連接點。  
+- 與[linkedin.com/pulse/5g-nr-dl-sch-ldpc-channel-coding-base-graph-](https://www.linkedin.com/pulse/5g-nr-dl-sch-ldpc-channel-coding-base-graph-selection-chelikani)文章的標準點圖比較，發現右半部分（col 23Z~67Z）缺乏連接點。  
 - 此問題意味著鄰接表中缺少某些 parity check 的約束邊，導致 parity 計算錯誤。
 
 ### 2.3 深入 H 矩陣結構分析與五部分區塊理解
@@ -621,7 +621,7 @@ end
   3. 右下 parity bits 對應的單位矩陣（42 × Z）  
   4. 鄰接表連接情況（cn_to_vn 連線關係）  
   5. Lifting size Z 的一致性與行列匹配  
-- 發現核心 parity check 雙對角塊缺失是導致錯誤的主因。
+- 發現右下單位矩陣區塊缺失是導致錯誤的主因。
 
 ### 2.4 嘗試補齊右下單位矩陣區塊
 
@@ -649,8 +649,6 @@ end
 ### 2.7 補上雙對角區塊與最終驗證
 
 - 將缺失雙對角區塊補齊，生成的 H_expanded 點圖與官方資料一致。  
-- 再次計算 parity，發現 parity bits 正確接近 0，編碼效果改善。
-
 ---
 
 ## 三、學習心得與技術總結
