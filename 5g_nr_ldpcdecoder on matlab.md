@@ -660,4 +660,131 @@ end
 - **矩陣分塊推導理論可行，但實務需確認矩陣可逆性與數值穩定性。**  
 - **parity check bits 分布、H 矩陣 lifting 展開方式、雙對角結構意義**，對整體系統更深入理解。  
 - 後續需繼續驗證 parity = 0 是否嚴格成立，並完成 Tx 端整合測試。
+
+# 2025/07/11 - 5G NR LDPC 編碼與矩陣展開嘗試與問題排查
+
+## 一、目標與背景  
+延續前次 Base Graph 1 的 H 矩陣展開與 LDPC 編碼正確性驗證，lifting size Z=384。重點在確保 parity bits 計算正確與 syndrome 等於零。
+
+---
+
+## 二、步驟詳細紀錄
+
+1. 發現 core parity 對角區塊存在重複填入  
+檢視之前手動補上的 H 矩陣，發現雙對角 parity check 區域中部分元素數值為 2，mod 2 下等於 0，但代表重複累加。這可能導致 parity 約束錯亂及編碼錯誤。
+
+2. 調整展開策略為先重疊 Base Graph 層，再展開  
+不將 8 個 46×68 的 base graph 矩陣各自展開為 (46×384)×(68×384) 大矩陣後相加，改為先將這 8 個 base graph 位移量矩陣疊加合成一個 46×68 位移值矩陣，然後用此矩陣依 lifting size Z=384 生成大型循環展開矩陣。此方法生成的 H_expanded 與官方點圖一致，結構無誤。
 <img width="676" height="526" alt="image" src="https://github.com/user-attachments/assets/33215b34-544d-4699-8912-60107e66f6ce" />
+
+4. 編碼後 parity bits 仍非零  
+利用展開矩陣乘以 codeword 進行 parity check，syndrome 不為零，說明 parity bits 計算仍有問題，編碼約束不完整。
+
+5. 參考 OAI 編碼方式，避免直接使用展開矩陣  
+決定嚴格沿用 OpenAirInterface 的 LDPC 編碼實作方式，不展開 H 矩陣為大型稀疏矩陣，而是直接使用鄰接表記錄邊連接關係及位移值，透過 bitxor 及 cyclic rotate 等邏輯運算直接計算 parity bits，不依賴矩陣乘法。
+
+6. 展開矩陣僅用於 parity check 驗證  
+展開的 H_expanded 矩陣只用來計算 syndrome 驗證 parity check 是否通過，實際編碼不使用該矩陣運算。
+
+7. 重構符合 OAI 樣式的編碼函式，並整合位移值與鄰接表使用  
+
+```matlab
+function [codeword, c, d] = ldpc_encode_oai_style(input_bits, BG, Zc, ...
+    no_shift_values, pointer_shift_values, Gen_shift_values, ...
+    nrows, ncols, Kb, no_punctured_columns, removed_bit)
+
+    %=== 初始化參數 ===%
+    block_length = length(input_bits);
+    c = zeros(Kb * Zc, 1);         % 資訊區（包含前導 2Z）
+    d = zeros(nrows * Zc, 1);      % parity bits 區
+
+    % 將 input_bits 填入 c (從第 2Z 開始)
+    c_idx = (2 * Zc + 1):(2 * Zc + block_length);
+    c(c_idx) = input_bits;
+
+    %=== parity check 部分 ===%
+    for i2 = 1:Zc
+        % 對每一欄進行 cyclic rotate（輪轉）
+        for i5 = 1:Kb
+            temp = c((i5 - 1) * Zc + 1);
+            c((i5 - 1) * Zc + 1 : i5 * Zc - 1) = c((i5 - 1) * Zc + 2 : i5 * Zc);
+            c(i5 * Zc) = temp;
+        end
+
+        % 利用鄰接表及位移值計算 parity bits
+        for i1 = 1:nrows - no_punctured_columns
+            channel_temp = 0;
+
+            % 每個 row 依鄰接表 no_shift_values 決定參與 bitxor 的 bits 數量
+            for i3 = 1:Kb
+                temp_prime = (i1 - 1) * ncols + (i3 - 1);
+                for i4 = 1:no_shift_values(temp_prime + 1)
+                    shift_idx = pointer_shift_values(temp_prime + 1) + i4 - 1;
+                    shift_val = Gen_shift_values(shift_idx);
+                    index = (i3 - 1) * Zc + mod(shift_val, Zc) + 1;
+                    channel_temp = bitxor(channel_temp, c(index));
+                end
+            end
+
+            d(i2 + (i1 - 1) * Zc) = channel_temp;
+        end
+    end
+
+    % 輸出完整 codeword，包含資訊區（含 dummy bits）及 parity bits
+    codeword = [
+        c(1 : Kb * Zc);           % 全部 22Z，包括前導 dummy bits
+        d(1 : nrows * Zc)         % 全部 46Z parity bits
+    ];
+    fprintf("✅ 最終輸出完整 codeword 長度: %d（預期應為 %d）
+", length(codeword), (Kb + nrows) * Zc);
+end
+```
+
+此函式自動將 input_bits（長度 K=20×Z）填入包含 2×Z 前導 dummy bits 的 c 陣列，然後依鄰接表與位移值做 cyclic rotate 與 bitxor 計算 parity bits，最後輸出長度為 68×Z 的完整 codeword。
+
+目前整合主程式時：
+
+- 確認傳入 `input_bits` 長度為 20×Z。
+- `ldpc_encode_oai_style` 自動補 2×Z 0 的 dummy bits 並編碼。
+- 輸出完整 codeword 長度為 68×Z。
+- QPSK 調變、AWGN 通道與 LLR 計算均以 68×Z 為長度。
+- 用 `H_expanded` 乘以 codeword 計算 syndrome，理論上此處的矩陣乘法正確，且 syndrome 的長度為 parity check 數量（46×Z）。
+
+**但目前計算出的 syndrome 仍不為 0，表示 parity bits 尚未完美符合約束條件。**
+
+---
+
+## 三、總結  
+- 5G NR LDPC 的 H 矩陣結構複雜，直接大矩陣展開後用矩陣乘法編碼不易正確。  
+- 先疊加 base graph 層後展開矩陣，可確保展開矩陣結構正確。  
+- 編碼時沿用 OAI 風格鄰接表與位移值計算，避免展開大矩陣。  
+- 編碼函式會自行補 dummy bits，輸出完整 68×Z 長度 codeword。  
+- 調變、通道、LLR 計算皆基於完整 codeword，流程合理。  
+- syndrome 應為 0 以證明 parity bits 正確，但目前不為 0，代表 parity bit 計算仍有誤。  
+- 後續需進一步排查鄰接表資料正確性、位移值使用細節與 cyclic rotate 運算的細節。
+
+---
+
+## 四、後續建議與可能方向
+
+- **仔細核對鄰接表與位移值資料**  
+  確認 `no_shift_values`、`pointer_shift_values`、`Gen_shift_values` 與鄰接表 `cn_to_vn` 的內容，確保沒有遺漏或錯位，特別是鄰接表的完整性與對應關係。
+
+- **詳細檢查 cyclic rotate 運算邏輯**  
+  `ldpc_encode_oai_style` 中的位元輪轉（rotate）是否符合 5G NR 規範，特別是輪轉方向和輪轉位置索引，是否與標準相符。
+
+- **利用單個 codeword block 逐步偵錯**  
+  測試極簡化輸入（如全零、全一、單一 bit 置 1）並觀察 parity bits 與 syndrome 的變化，確認編碼流程邏輯。
+
+- **嘗試使用鄰接表進行 parity check 運算**  
+  不僅用展開矩陣做 syndrome 檢查，也可用鄰接表結合位移值用 bitxor 方式手動計算 syndrome，確認兩者是否一致。
+
+- **參考 OpenAirInterface 最新版本源碼**  
+  深入對照 OAI 專案的 `ldpc_encoder.c` 實現與參數，檢查自己寫法與其差異。
+
+- **逐步加強單元測試與視覺化工具**  
+  使用 spy、heatmap 等繪圖工具驗證矩陣結構，用詳細 log 或斷點檢查計算過程。
+
+- **考慮動態偵錯工具或模擬器**  
+  嘗試借助 LDPC 解碼器輸出錯誤指標，甚至在仿真中注入已知錯誤位元，驗證編碼正確性。
+
