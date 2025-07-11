@@ -660,3 +660,4 @@ end
 - **矩陣分塊推導理論可行，但實務需確認矩陣可逆性與數值穩定性。**  
 - **parity check bits 分布、H 矩陣 lifting 展開方式、雙對角結構意義**，對整體系統更深入理解。  
 - 後續需繼續驗證 parity = 0 是否嚴格成立，並完成 Tx 端整合測試。
+<img width="676" height="526" alt="image" src="https://github.com/user-attachments/assets/33215b34-544d-4699-8912-60107e66f6ce" />
