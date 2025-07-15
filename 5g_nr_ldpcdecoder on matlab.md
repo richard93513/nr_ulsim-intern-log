@@ -788,3 +788,110 @@ end
 - **考慮動態偵錯工具或模擬器**  
   嘗試借助 LDPC 解碼器輸出錯誤指標，甚至在仿真中注入已知錯誤位元，驗證編碼正確性。
 
+# 2025/07/015 - LDPC 模擬流程 實作與除錯紀錄
+
+## 1. 起點：用 OAI 系統模擬驗證 syndrome 失敗
+
+我一開始用 OpenAirInterface（OAI）系統的 LDPC 編碼器來做模擬，發現 syndrome 驗證一直不正確，錯誤率很高。雖然 OAI 裡面有完整的編碼與解碼流程，但我對其中的細節並不完全理解，尤其是 LDPC 編碼器如何計算 parity bits、整體 codeword 結構是什麼樣子。
+
+## 2. 對 OAI 編碼流程的理解與拆解
+
+為了釐清問題，我開始拆解 OAI LDPC 編碼器的實作流程，嘗試找到 parity bits 計算與 syndrome 驗證的關鍵。
+
+- 了解到 codeword 總長是 30Z，其中：
+  - 前 2Z 是 dummy bits (0)
+  - 接著 20Z 是原始資訊位元
+  - 接著 4Z 是 core parity bits
+  - 最後 4Z 是 parity bits（不完全是 core parity bits）
+
+我嘗試將原本的 H 矩陣（46×68 的 base graph 矩陣展開）縮減，只保留用於編碼的部分（前 4 行 × 26 列），原因是我只用到資訊與 parity bits 對應的子矩陣。
+
+## 3. 只用 4×26Z 的編碼區塊，重新實作 LDPC 編碼器
+
+基於上述理解，我實作了新的編碼器流程：
+
+- 初始化一個長度為 26Z 的向量 c，包含 dummy bits、原始資訊 bits、core parity bits。
+- 原始資訊 bits 從 c 的第 2Z+1 位開始填入。
+- 使用 cyclic shift 與 XOR 運算，計算 core parity bits（欄位 23~26）：
+  - 利用儲存的位移資訊（Gen_shift_values、no_shift_values、pointer_shift_values）計算 XOR 和，類似矩陣乘法中乘以循環移位矩陣。
+- 接著再做 cyclic shift，計算整體 parity bits（4Z），放入 d 向量。
+- 最終輸出 codeword = [c; d]，長度為 30Z。
+
+程式碼片段示意：
+
+```matlab
+% 填入資訊 bits
+c((2*Zc+1):(2*Zc+K)) = input_bits;
+
+% 計算 core parity bits
+for row = 1:4
+    parity_bits = zeros(Zc,1);
+    for col = 1:22
+        % 根據位移資訊做 XOR 計算
+    end
+    c(core_parity_idx) = parity_bits;
+end
+
+% cyclic shift 與 parity bits 計算
+for z = 1:Zc
+    cyclic_shift(c);
+    for row = 1:4
+        parity_bit = 0;
+        for col = 0:25
+            % 根據位移做 XOR parity 計算
+        end
+        d(parity_bit_idx) = parity_bit;
+    end
+end
+
+codeword = [c; d];
+```
+
+## 4. LDPC 編碼驗證的困惑與探索
+
+我在驗證編碼正確性時遇到問題：
+
+- 傳統使用 syndrome = c * H' (mod 2) 驗證 syndrome 是否為 0，但因為我用的是分段矩陣結構，不能直接用整個 H 矩陣乘法。
+- 我知道 core parity bits 是用 H 的前 4 行 × 22 列子矩陣乘以資訊 bits 計算得來。
+- 後面 parity bits 的計算是利用公式：p = B^{-1} * A * m，其中 B 與 A 分別是 H 矩陣拆分出來的子矩陣，p 是 parity bits，m 是資訊 bits。
+
+## 5. 驗證方法的嘗試
+
+我將 codeword 分成：
+
+- c 部分：包含原始資訊 bits (22Z) 與 core parity bits (4Z)，共 26Z。
+- d 部分：最後 4Z parity bits。
+
+驗證步驟：
+
+1. 用 H 前 4 行，對 c 前 26Z 做驗證：H_check * c ≡ 0 (mod 2)
+2. 用 B^{-1} A 反推公式對 parity bits d 做驗證，看與計算結果是否相符。
+
+程式碼示意：
+
+```matlab
+% 取 H 矩陣子區域
+H_check = [P I];  % P: 4×22Z, I: 4×4Z 單位矩陣
+
+% syndrome 驗證
+syndrome = mod(H_check * c, 2);
+assert(all(syndrome == 0));
+
+% parity bits 驗證
+p_calc = mod(B_inv * A * m, 2);
+assert(all(p_calc == d));
+```
+
+## 6. 總結與後續
+
+目前我仍在嘗試正確寫出驗證程式，避免直接用完整 H 矩陣乘法，而是分段利用矩陣拆分、循環移位與 XOR 計算，對 core parity 與 parity bits 做分別驗證。
+
+這樣的學習過程讓我：
+
+- 理解 5G NR LDPC 的編碼結構與子矩陣劃分
+- 知道 cyclic shift 與 XOR 可視為矩陣乘法的簡化實現
+- 掌握了編碼與驗證需分段進行，因為 parity bits 有反運算複雜度
+
+後續會再繼續釐清驗證細節，並嘗試撰寫更嚴謹的驗證碼。
+
+---
